@@ -1,0 +1,14 @@
+diff --git a/chrome/browser/ui/views/tabs/common/tab_strip_collection_controller.cc b/chrome/browser/ui/views/tabs/common/tab_strip_collection_controller.cc
+index 997eab88b69d9f2f8d295174fe509babe05bf182..b7a81d292d24726b06f0eb99e81fccfc433a901e 100644
+--- a/chrome/browser/ui/views/tabs/common/tab_strip_collection_controller.cc
++++ b/chrome/browser/ui/views/tabs/common/tab_strip_collection_controller.cc
+@@ -312,7 +312,8 @@ void TabStripCollectionController::SelectTab(
+     tab_index = split_tabs::GetIndexOfLastActiveTab(model_, split_id.value());
+   }
+ 
+-  model_->ActivateTabAt(tab_index.value(), gesture_detail);
++  tree_tab_view_utils::ActivateTabAndSelectTreeTabSubtree(
++    model_, tab_index.value(), gesture_detail);
+ }
+ 
+ void TabStripCollectionController::CloseTab(

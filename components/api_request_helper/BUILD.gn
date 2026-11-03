@@ -23,6 +23,8 @@ static_library("api_request_helper") {
     "//services/network/public/cpp",
     "//url",
   ]
+
+  deps = [ "//net" ]
 }
 
 source_set("unit_tests") {
@@ -34,6 +36,8 @@ source_set("unit_tests") {
   deps = [
     ":api_request_helper",
     "//base/test:test_support",
+    "//mojo/public/cpp/system",
+    "//net",
     "//net/traffic_annotation:test_support",
     "//services/network:test_support",
     "//testing/gtest",

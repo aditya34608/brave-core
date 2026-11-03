@@ -14,7 +14,10 @@
 #include "base/functional/callback_helpers.h"
 #include "base/json/json_reader.h"
 #include "base/memory/raw_ptr.h"
+#include "base/task/sequenced_task_runner.h"
+#include "base/task/thread_pool/thread_pool_instance.h"
 #include "base/test/bind.h"
+#include "base/test/run_until.h"
 #include "base/test/task_environment.h"
 #include "base/test/test_future.h"
 #include "brave/components/ai_chat/core/browser/ai_chat_credential_manager.h"
@@ -38,6 +41,17 @@ using ::testing::_;
 namespace ai_chat {
 
 namespace {
+
+// Waits for JSON parses already posted to the thread pool, and their replies.
+// Needed to assert that an event is not delivered, which no `RunUntil()`
+// condition can wait for.
+void WaitForPendingParses() {
+  base::ThreadPoolInstance::Get()->FlushForTesting();
+  base::test::TestFuture<void> replies_done;
+  base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
+      FROM_HERE, replies_done.GetCallback());
+  EXPECT_TRUE(replies_done.Wait());
+}
 
 constexpr char kTestModelName[] = "test-model";
 constexpr char kTestUpstreamModelName[] = "upstream-test-model";
@@ -116,7 +130,7 @@ class ObliviousHttpAPIClientUnitTest : public testing::Test,
 
   void EmitChunk(const std::string& content) {
     EmitRawChunk(absl::StrFormat(
-        "data: {\"choices\":[{\"delta\":{\"content\":\"%s\"}}]}\n", content));
+        "data: {\"choices\":[{\"delta\":{\"content\":\"%s\"}}]}\n\n", content));
   }
 
   void CompleteWithInnerResponse(int response_code, std::string body) {
@@ -148,6 +162,9 @@ class ObliviousHttpAPIClientUnitTest : public testing::Test,
       data_received_callback = base::BindLambdaForTesting(
           [&](EngineConsumer::GenerationResultData data) {
             received_chunks_.push_back(std::move(data));
+            if (on_chunk_received_) {
+              on_chunk_received_.Run();
+            }
           });
     }
 
@@ -181,6 +198,7 @@ class ObliviousHttpAPIClientUnitTest : public testing::Test,
   raw_ptr<MockObliviousHttpConfigManager> config_manager_ = nullptr;
   base::test::TestFuture<EngineConsumer::GenerationResult> future_;
   std::vector<EngineConsumer::GenerationResultData> received_chunks_;
+  base::RepeatingClosure on_chunk_received_;
   network::mojom::ObliviousHttpRequestPtr last_request_;
   mojo::Remote<network::mojom::ObliviousHttpClient> completion_client_;
   mojo::Remote<network::mojom::ObliviousHttpChunkClient> chunk_client_;
@@ -225,6 +243,40 @@ TEST_F(ObliviousHttpAPIClientUnitTest,
   ASSERT_TRUE(result.has_value());
   ASSERT_TRUE(result->event->is_completion_event());
   EXPECT_EQ("", result->event->get_completion_event()->completion);
+}
+
+TEST_F(ObliviousHttpAPIClientUnitTest,
+       PerformRequest_Streaming_DeliversFinalEventWithoutBlankLine) {
+  PerformRequest(/*enable_data_received_callback=*/true);
+
+  EmitChunk("part1");
+  EmitRawChunk("data: {\"choices\":[{\"delta\":{\"content\":\"part2\"}}]}\n");
+
+  CompleteWithInnerResponse(net::HTTP_OK, "");
+  auto result = future_.Take();
+
+  ASSERT_EQ(2u, received_chunks_.size());
+  ASSERT_TRUE(received_chunks_[1].event->is_completion_event());
+  EXPECT_EQ("part2",
+            received_chunks_[1].event->get_completion_event()->completion);
+  ASSERT_TRUE(result.has_value());
+}
+
+// Nothing is delivered after a data callback clears all queries. Using the
+// deleted `InnerClient` after the callback is only reported under ASan.
+TEST_F(ObliviousHttpAPIClientUnitTest,
+       PerformRequest_Streaming_ClearAllQueriesFromDataCallback) {
+  on_chunk_received_ =
+      base::BindLambdaForTesting([&]() { client_->ClearAllQueries(); });
+  PerformRequest(/*enable_data_received_callback=*/true);
+
+  EmitChunk("part1");
+  EmitChunk("part2");
+  ASSERT_TRUE(
+      base::test::RunUntil([&]() { return !received_chunks_.empty(); }));
+  // So that a second delivery would be seen.
+  WaitForPendingParses();
+  EXPECT_EQ(1u, received_chunks_.size());
 }
 
 TEST_F(ObliviousHttpAPIClientUnitTest,
@@ -319,14 +371,14 @@ TEST_F(ObliviousHttpAPIClientUnitTest,
       "\"id\":\"call_abc\","
       "\"function\":{\"name\":\"web_context_search\","
       "\"arguments\":\"{\\\"query\\\":\\\"brave browser\\\"}\"}"
-      "}]}}]}\n");
+      "}]}}]}\n\n");
 
   // Emit a nearai server tool result for the same tool call.
   EmitRawChunk(
       "data: {\"choices\":[{\"delta\":{\"nearai_tool_result\":{"
       "\"tool_call_id\":\"call_abc\","
       "\"output\":\"Brave is a privacy-focused browser.\""
-      "}}}]}\n");
+      "}}}]}\n\n");
 
   CompleteWithInnerResponse(net::HTTP_OK, "");
   ASSERT_TRUE(future_.Wait());

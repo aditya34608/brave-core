@@ -438,6 +438,36 @@ class TestFiltersTest(unittest.TestCase):
         )
         self.assertEqual([], self._check('-FooTest.*'))
 
+    def test_copies_only_into_suites_the_filters_binary_can_hold(self):
+        filters = TestFilters(
+            FakeRange(),
+            TestIndex(['IN_PROC_BROWSER_TEST_F(GlicTest, AccountMismatch) {']),
+            TestIndex(
+                [
+                    'IN_PROC_BROWSER_TEST_F(GlicTest, AccountMismatch) {',
+                    'TEST(DrivePickerUtilTest, AccountMismatch) {',
+                    'IN_PROC_BROWSER_TEST_F(GlicNewTest, AccountMismatch) {',
+                ]
+            ),
+        )
+
+        def check(where: str) -> list[str]:
+            return filters.check(
+                TestFilters.parse(where, '-GlicTest.AccountMismatch')
+            )
+
+        self.assertEqual(
+            ['copied into new GlicNewTest'],
+            check('test/filters/browser_tests.filter:1'),
+        )
+        self.assertEqual(
+            ['copied into new DrivePickerUtilTest'],
+            check('test/filters/unit_tests.filter:1'),
+        )
+        self.assertEqual(
+            ['copied into new DrivePickerUtilTest, GlicNewTest'], check('f:1')
+        )
+
     def test_new_subclass_suite_of_a_filtered_fixture(self):
         brave = FakeGit({(None, 'test/filters/a.filter'): '-FooTest.*\n'})
         log = (

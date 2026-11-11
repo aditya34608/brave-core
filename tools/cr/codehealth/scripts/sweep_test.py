@@ -225,6 +225,25 @@ class RulesTest(unittest.TestCase):
         )
         self.assertEqual(['components/sync/base/features.cc'], flips)
 
+    def test_warning_opt_outs_list_removed_flags_and_configs(self):
+        self.enterContext(
+            mock.patch.object(knowledge_base, 'brave_tree', FakeBrave)
+        )
+        base = knowledge_base.KnowledgeBase(sweep.RULES_DIR / 'enforcement')
+        rule = 'tools/cr/codehealth/rules/enforcement/warning-opt-outs.md'
+        for removed in (
+            '    "-Wno-implicit-function-declaration",',
+            '  configs += [ "//build/config/compiler:no_exit_time_destructors" ]',
+        ):
+            change = Change.parse(
+                'diff --git a/a/BUILD.gn b/a/BUILD.gn\n'
+                '@@ -1,1 +0,0 @@\n'
+                f'-{removed}\n'
+            )
+            self.assertIn(
+                rule, {m.rule.path for m in base.match(change)}, removed
+            )
+
 
 class SweepTest(unittest.TestCase):
     def setUp(self):

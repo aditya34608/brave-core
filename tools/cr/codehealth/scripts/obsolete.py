@@ -527,6 +527,8 @@ class TestIndex:
         )
         # suite -> the prefixes its `INSTANTIATE_*` macros give it.
         self.prefixes: dict[str, set[str]] = defaultdict(set)
+        # suite -> `browser` for `IN_PROC_BROWSER_TEST*`, `unit` for `TEST*`.
+        self.families: dict[str, set[str]] = defaultdict(set)
         self.add(list(lines))
 
     @classmethod
@@ -574,6 +576,10 @@ class TestIndex:
             else:
                 kind = 'F'
             self.suites[suite][name].add((kind, disabled or suite_disabled))
+            if macro.startswith('IN_PROC_BROWSER_TEST'):
+                self.families[suite].add('browser')
+            elif macro.startswith(('TEST', 'TYPED_TEST')):
+                self.families[suite].add('unit')
 
     @classmethod
     def _strip(cls, name: str) -> tuple[str, bool]:
@@ -585,6 +591,14 @@ class TestIndex:
             disabled |= prefix == 'DISABLED_'
             name = name[len(prefix) :]
         return name, disabled
+
+    def can_build_into(self, suite: str, binary: str | None) -> bool:
+        """Whether the suite's macros fit a binary of that kind (`unit`,
+        `browser` or `interactive`), or either is unknown."""
+        families = self.families.get(suite)
+        if not binary or not families:
+            return True
+        return ('unit' if binary == 'unit' else 'browser') in families
 
     def matches(self, entry: FilterEntry) -> dict[str, set[tuple[str, bool]]]:
         """The test names the entry matches, with their kinds."""
@@ -719,12 +733,14 @@ class TestFilters:
             if was == {True} and False in now:
                 found.append('DISABLED_ dropped upstream')
         if '*' not in entry.test and len(entry.test) >= self._COPIED_MIN:
+            binary = self._binary_kind(entry)
             copies = sorted(
                 suite
                 for suite, names in self._new.suites.items()
                 if entry.test in names
                 and suite != entry.suite
                 and suite not in self._old.suites
+                and self._new.can_build_into(suite, binary)
             )
             if copies:
                 found.append(f'copied into new {", ".join(copies[:3])}')

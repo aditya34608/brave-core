@@ -4,6 +4,7 @@
 # You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import("//brave/components/commander/common/buildflags/buildflags.gni")
+import("//brave/components/local_ai/buildflags/buildflags.gni")
 import("//build/config/features.gni")
 
 assert(toolkit_views)
@@ -35,6 +36,7 @@ source_set("location_bar") {
     "//brave/components/brave_search_conversion",
     "//brave/components/commander/browser",
     "//brave/components/commander/common",
+    "//brave/components/local_ai/buildflags",
     "//brave/components/resources:strings",
     "//brave/components/vector_icons",
     "//chrome/browser/image_fetcher",
@@ -58,6 +60,10 @@ source_set("location_bar") {
     "//ui/gfx",
     "//ui/views",
   ]
+
+  if (enable_local_ai) {
+    deps += [ "//brave/browser/history_embeddings:utils" ]
+  }
 
   public_deps = [ "//brave/components/playlist/core/common/buildflags" ]
 

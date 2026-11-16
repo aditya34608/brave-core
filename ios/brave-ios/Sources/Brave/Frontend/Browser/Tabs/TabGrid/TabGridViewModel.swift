@@ -22,6 +22,9 @@ class TabGridViewModel {
   private(set) var openGroup: TabGroup?
   private(set) var openGroupTitle = ""
   private(set) var openGroupItems: [TabGridItem] = []
+  private(set) var openGroupSourceFrame: CGRect?
+  @ObservationIgnored
+  weak var openGroupContainerView: TabGridContainerView?
   private var isNamingOpenGroup = false
   private(set) var isPrivateTabsLocked: Bool = false
   var onModeSwitchComplete: (() -> Void)?
@@ -284,13 +287,15 @@ class TabGridViewModel {
     closeTabs(Set(tabManager.tabs(in: group).map(\.id)))
   }
 
-  func showGroup(_ group: TabGroup) {
+  func showGroup(_ group: TabGroup, from sourceFrame: CGRect? = nil) {
+    openGroupSourceFrame = sourceFrame
     openGroup = group
     updateOpenGroupItems()
   }
 
   func closeOpenGroup() {
     isNamingOpenGroup = false
+    openGroupSourceFrame = nil
     openGroup = nil
     openGroupTitle = ""
     openGroupItems = []

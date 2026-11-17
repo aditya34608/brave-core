@@ -5,6 +5,8 @@
 
 import BraveStrings
 import DesignSystem
+import Lottie
+import Strings
 import SwiftUI
 import Web
 
@@ -21,6 +23,10 @@ struct TabGroupDetailView: View {
   @FocusState private var isTitleFocused: Bool
   @State private var isExpanded = false
   @State private var expandedFrame: CGRect?
+  @State private var editMode: EditMode = .inactive
+  @State private var selectedTabs: Set<TabState.ID> = []
+  @State private var isShredAlertPresented = false
+  @State private var isShredAnimationVisible = false
 
   private var browserColors: BrowserColors {
     viewModel.isPrivateBrowsing ? .privateMode : .standard
@@ -38,10 +44,10 @@ struct TabGroupDetailView: View {
       scrollsOnModeSwitch: false,
       isReorderingEnabled: false,
       isGroupDetail: true,
-      selectedTabList: .constant([])
+      selectedTabList: $selectedTabs
     )
-    // The tab grid's edit mode doesn't apply to a group's tabs
-    .environment(\.editMode, .constant(.inactive))
+    // The tray's edit mode does not apply here. This grid has its own selection.
+    .environment(\.editMode, $editMode)
     .background {
       Color(uiColor: browserColors.tabSwitcherBackground)
         .ignoresSafeArea()
@@ -69,6 +75,22 @@ struct TabGroupDetailView: View {
           insets.top = $0
         }
         .contentShape(.rect)
+        .animation(nil, value: editMode)
+    }
+    .overlay(alignment: .bottom) {
+      if editMode == .active {
+        selectionFooter
+          .transition(.blurReplace)
+          .onGeometryChange(for: CGFloat.self, of: \.size.height) {
+            insets.bottom = $0
+          }
+      }
+    }
+    .onChange(of: editMode) {
+      if editMode != .active {
+        selectedTabs = []
+        insets.bottom = 0
+      }
     }
     .scaleEffect(isExpanded ? CGSize(width: 1, height: 1) : collapsedScale)
     .offset(isExpanded ? .zero : collapsedOffset)
@@ -92,6 +114,48 @@ struct TabGroupDetailView: View {
       if !isTitleFocused {
         commitTitle()
         isEditingTitle = false
+      }
+    }
+    .alert(
+      Strings.Shields.shredSiteDataConfirmationTitle,
+      isPresented: $isShredAlertPresented
+    ) {
+      Button(role: .destructive) {
+        isShredAnimationVisible = true
+      } label: {
+        Text(Strings.Shields.shredDataButtonTitle)
+      }
+      .keyboardShortcut(.defaultAction)
+    } message: {
+      Text(Strings.Shields.shredSiteSelectedTabsConfirmationMessage)
+    }
+    .overlay {
+      if isShredAnimationVisible {
+        LottieView(animation: .named("shred", bundle: .module))
+          .configure { view in
+            view.contentMode = .scaleAspectFill
+          }
+          .resizable()
+          .playing(loopMode: .playOnce)
+          .animationDidFinish { _ in
+            let originalTabIDs = Set(viewModel.tabs.map(\.id))
+            var dismissAfterShred = originalTabIDs.count == 1
+            let affectedTabIDs = viewModel.shredSelectedTabs(selectedTabs)
+            if !dismissAfterShred {
+              dismissAfterShred = originalTabIDs.count == affectedTabIDs.count
+            }
+            withAnimation {
+              isShredAnimationVisible = false
+              editMode = .inactive
+              selectedTabs = []
+            }
+            if dismissAfterShred {
+              dismiss()
+            }
+          }
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .ignoresSafeArea()
+          .transition(.opacity)
       }
     }
   }
@@ -149,6 +213,11 @@ struct TabGroupDetailView: View {
       } label: {
         Label(Strings.TabGrid.ungroupMenuTitle, braveSystemImage: "leo.group.ungroup")
       }
+      Button {
+        editMode = .active
+      } label: {
+        Label(Strings.TabGrid.selectTabsButtonTitle, braveSystemImage: "leo.check.circle-outline")
+      }
       Button(role: .destructive) {
         // Closing every remaining tab leaves nothing to go back to
         let dismissAfterClose = viewModel.closesAllTabs(in: group)
@@ -170,13 +239,23 @@ struct TabGroupDetailView: View {
   private var header: some View {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 12) {
-        Button {
-          collapse()
-        } label: {
-          Label(Strings.TabGrid.backToTabsAccessibilityLabel, braveSystemImage: "leo.close")
-            .labelStyle(.buttonIconOnly)
+        if editMode == .active {
+          Button {
+            editMode = .inactive
+          } label: {
+            Label(Strings.CancelString, braveSystemImage: "leo.close")
+              .labelStyle(.titleOnly)
+          }
+          .plainHeaderIconButtonStyle()
+        } else {
+          Button {
+            collapse()
+          } label: {
+            Label(Strings.TabGrid.backToTabsAccessibilityLabel, braveSystemImage: "leo.close")
+              .labelStyle(.buttonIconOnly)
+          }
+          .plainHeaderIconButtonStyle()
         }
-        .plainHeaderIconButtonStyle()
         Spacer()
         Button {
           viewModel.addTab(in: group)
@@ -189,11 +268,21 @@ struct TabGroupDetailView: View {
             .labelStyle(.buttonIconOnly)
         }
         .plainHeaderIconButtonStyle()
+        .selectionModeHidden(editMode == .active)
         optionsMenu
+          .selectionModeHidden(editMode == .active)
       }
       .foregroundStyle(Color(braveSystemName: .textSecondary))
       Group {
-        if isEditingTitle {
+        if editMode == .active {
+          HStack {
+            Text(Strings.TabGrid.selectedTabs)
+              .foregroundStyle(Color(braveSystemName: .textPrimary))
+            Text(selectedTabs.count, format: .number)
+              .foregroundStyle(Color(braveSystemName: .textTertiary))
+          }
+          .accessibilityElement()
+        } else if isEditingTitle {
           TextField(Strings.TabGrid.groupNamePlaceholder, text: $title)
             .focused($isTitleFocused)
             .submitLabel(.done)
@@ -218,11 +307,54 @@ struct TabGroupDetailView: View {
     .containerCornerOffset(.leading, sizeToFit: true)
     .dynamicTypeSize(.xSmall..<DynamicTypeSize.accessibility2)
   }
+
+  /// Shred and Close for the tabs selected in this group. Both stay disabled until a tab is selected.
+  private var selectionFooter: some View {
+    HStack {
+      Button {
+        isShredAlertPresented = true
+      } label: {
+        Label(Strings.TabGrid.shredSelectedTabsButtonTitle, braveSystemImage: "leo.shred.data")
+      }
+      .plainToolbarIconButtonStyle()
+      .disabled(selectedTabs.isEmpty || !viewModel.isShredAvailableForSelectedTabs(selectedTabs))
+      .frame(maxWidth: .infinity, alignment: .leading)
+
+      Button {
+        withAnimation {
+          let tabsToClose = selectedTabs
+          let dismissAfterClose = tabsToClose.count == viewModel.tabs.count
+          editMode = .inactive
+          viewModel.closeTabs(tabsToClose)
+          if dismissAfterClose {
+            dismiss()
+          }
+        }
+      } label: {
+        Label(Strings.close, braveSystemImage: "leo.close")
+      }
+      .filledToolbarIconButtonStyle()
+      .disabled(selectedTabs.isEmpty)
+      .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+    .fontWeight(.medium)
+    .padding(.horizontal, 16)
+    .padding(.vertical, 8)
+    .dynamicTypeSize(.xSmall..<DynamicTypeSize.accessibility2)
+  }
 }
 
 extension Animation {
   /// Matches the spring of the tab tray's transition to and from a tab
   fileprivate static var growAnimation: Animation {
     .spring(duration: 0.4, bounce: 0)
+  }
+}
+
+extension View {
+  fileprivate func selectionModeHidden(_ hidden: Bool) -> some View {
+    opacity(hidden ? 0 : 1)
+      .allowsHitTesting(!hidden)
+      .accessibilityHidden(hidden)
   }
 }

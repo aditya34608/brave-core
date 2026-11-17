@@ -227,50 +227,56 @@ struct TabGroupDetailView: View {
 
   private var optionsMenu: some View {
     Menu {
-      Button {
-        title = viewModel.openGroupTitle
-        isEditingTitle = true
-      } label: {
-        Label(Strings.TabGrid.editGroupNameMenuTitle, braveSystemImage: "leo.edit.pencil")
-      }
-      Button {
-        viewModel.ungroup(group)
-      } label: {
-        Label(Strings.TabGrid.ungroupMenuTitle, braveSystemImage: "leo.group.ungroup")
-      }
-      Button {
-        editMode = .active
-      } label: {
-        Label(Strings.TabGrid.selectTabsButtonTitle, braveSystemImage: "leo.check.circle-outline")
-      }
-      Menu {
+      Section {
         Button {
-          activeShredMode = .selectedTab
-          isShredAlertPresented = true
+          title = viewModel.openGroupTitle
+          isEditingTitle = true
         } label: {
-          Text(Strings.TabGrid.shredSelectedTabButtonTitle)
+          Label(Strings.TabGrid.editGroupNameMenuTitle, braveSystemImage: "leo.edit.pencil")
         }
-        .disabled(!viewModel.isSelectedTabShredAvailable)
-        Button(role: .destructive) {
-          activeShredMode = .allTabs
-          isShredAlertPresented = true
+        Button {
+          viewModel.ungroup(group)
         } label: {
-          Text(Strings.TabGrid.shredAllTabsButtonTitle)
+          Label(Strings.TabGrid.ungroupMenuTitle, braveSystemImage: "leo.group.ungroup")
+        }
+      }
+      Section {
+        Button {
+          editMode = .active
+        } label: {
+          Label(Strings.TabGrid.selectTabsButtonTitle, braveSystemImage: "leo.check.circle-outline")
+        }
+      }
+      Section {
+        Menu {
+          Button {
+            activeShredMode = .selectedTab
+            isShredAlertPresented = true
+          } label: {
+            Text(Strings.TabGrid.shredSelectedTabButtonTitle)
+          }
+          .disabled(!viewModel.isSelectedTabShredAvailable)
+          Button(role: .destructive) {
+            activeShredMode = .allTabs
+            isShredAlertPresented = true
+          } label: {
+            Text(Strings.TabGrid.shredAllTabsButtonTitle)
+          }
+          .disabled(!viewModel.isShredMenuVisible)
+        } label: {
+          Label(Strings.TabGrid.shredTabsAccessibilityLabel, braveSystemImage: "leo.shred.data")
         }
         .disabled(!viewModel.isShredMenuVisible)
-      } label: {
-        Label(Strings.TabGrid.shredTabsAccessibilityLabel, braveSystemImage: "leo.shred.data")
-      }
-      .disabled(!viewModel.isShredMenuVisible)
-      Button(role: .destructive) {
-        // Closing every remaining tab leaves nothing to go back to
-        let dismissAfterClose = viewModel.closesAllTabs(in: group)
-        viewModel.closeTabs(in: group)
-        if dismissAfterClose {
-          dismiss()
+        Button(role: .destructive) {
+          // Closing every remaining tab leaves nothing to go back to
+          let dismissAfterClose = viewModel.closesAllTabs(in: group)
+          viewModel.closeTabs(in: group)
+          if dismissAfterClose {
+            dismiss()
+          }
+        } label: {
+          Label(Strings.TabGrid.closeGroupTabsMenuTitle, braveSystemImage: "leo.close")
         }
-      } label: {
-        Label(Strings.TabGrid.closeGroupTabsMenuTitle, braveSystemImage: "leo.close")
       }
     } label: {
       Label(Strings.TabGrid.groupOptionsAccessibilityLabel, braveSystemImage: "leo.more.vertical")

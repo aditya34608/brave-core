@@ -676,11 +676,6 @@ if (is_android) {
     brave_chrome_browser_deps += [ "//brave/browser/brave_ads/android" ]
   }
 } else {
-  brave_chrome_browser_sources += [
-    "//brave/browser/profile_resetter/brave_profile_resetter.cc",
-    "//brave/browser/profile_resetter/brave_profile_resetter.h",
-  ]
-
   brave_chrome_browser_deps += [
     "//brave/app:brave_generated_resources_grit",
     "//brave/browser/importer",

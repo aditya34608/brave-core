@@ -6,42 +6,40 @@
 #include "chrome/browser/ui/sync/tab_contents_synced_tab_delegate.h"
 
 #include "brave/components/containers/buildflags/buildflags.h"
+#include "content/public/browser/web_contents.h"
 
 #if BUILDFLAG(ENABLE_CONTAINERS)
+#include "base/feature_list.h"
 #include "brave/components/containers/content/browser/storage_partition_utils.h"
 #include "brave/components/containers/core/browser/temporary_container.h"
 #include "brave/components/containers/core/common/features.h"
 #include "content/public/browser/security_principal.h"
 #include "content/public/browser/site_instance.h"
 #include "content/public/browser/storage_partition_config.h"
-#include "content/public/browser/web_contents.h"
 #endif  // BUILDFLAG(ENABLE_CONTAINERS)
 
-#define ShouldSync ShouldSync_ChromiumImpl
+namespace {
 
-#include <chrome/browser/ui/sync/tab_contents_synced_tab_delegate.cc>
-
-#undef ShouldSync
-
-bool TabContentsSyncedTabDelegate::ShouldSync(
-    sync_sessions::SyncSessionsClient* sessions_client) {
-  if (!ShouldSync_ChromiumImpl(sessions_client)) {
+bool IsInTemporaryContainer(
+    [[maybe_unused]] content::WebContents* web_contents) {
+#if BUILDFLAG(ENABLE_CONTAINERS)
+  if (!base::FeatureList::IsEnabled(containers::features::kContainers)) {
     return false;
   }
-
-#if BUILDFLAG(ENABLE_CONTAINERS)
-  if (base::FeatureList::IsEnabled(containers::features::kContainers)) {
-    // Temporary containers are local-only and should never publish tab state to
-    // session sync.
-    if (auto* site_instance = web_contents()->GetSiteInstance()) {
-      const content::StoragePartitionConfig& storage_partition_config =
-          site_instance->GetSecurityPrincipal().GetStoragePartitionConfig();
-      if (containers::IsContainersStoragePartition(storage_partition_config)) {
-        return !containers::IsTemporaryContainerId(
-            storage_partition_config.partition_name());
-      }
-    }
+  auto* site_instance = web_contents->GetSiteInstance();
+  if (!site_instance) {
+    return false;
   }
+  const content::StoragePartitionConfig& storage_partition_config =
+      site_instance->GetSecurityPrincipal().GetStoragePartitionConfig();
+  return containers::IsContainersStoragePartition(storage_partition_config) &&
+         containers::IsTemporaryContainerId(
+             storage_partition_config.partition_name());
+#else
+  return false;
 #endif  // BUILDFLAG(ENABLE_CONTAINERS)
-  return true;
 }
+
+}  // namespace
+
+#include <chrome/browser/ui/sync/tab_contents_synced_tab_delegate.cc>

@@ -1,0 +1,14 @@
+diff --git a/chrome/browser/ui/sync/tab_contents_synced_tab_delegate.cc b/chrome/browser/ui/sync/tab_contents_synced_tab_delegate.cc
+index d77a8e4e57fb764999f7fce34a910c0a4082d6be..13601b44a9e52308057a8fa6fb51f333f9751273 100644
+--- a/chrome/browser/ui/sync/tab_contents_synced_tab_delegate.cc
++++ b/chrome/browser/ui/sync/tab_contents_synced_tab_delegate.cc
+@@ -130,6 +130,9 @@ TabContentsSyncedTabDelegate::GetBlockedNavigations() const {
+ 
+ bool TabContentsSyncedTabDelegate::ShouldSync(
+     sync_sessions::SyncSessionsClient* sessions_client) {
++  if (IsInTemporaryContainer(web_contents())) {
++    return false;
++  }
+   if (sessions_client->GetSyncedWindowDelegatesGetter()->FindById(
+           GetWindowId()) == nullptr) {
+     return false;

@@ -1,0 +1,47 @@
+# Copyright (c) 2026 The Brave Authors. All rights reserved.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
+# You can obtain one at https://mozilla.org/MPL/2.0/.
+
+substitutions:
+  - description: |-
+      Prefix the PageState of Containers tabs with their virtual URL prefix.
+
+      Blink restores a page from the URL in its PageState, so the PageState
+      carries the same "containers+<uuid>:" prefix as the virtual URL. A
+      Containers tab restored with Containers disabled then lands on an
+      unhandleable URL, rather than loading in the default storage partition.
+      See docs/containers/session_persistence.md.
+    after_function_impl:
+      function_name: ContentSerializedNavigationDriver::GetSanitizedPageStateForPickle
+      result_var: sanitized_page_state
+      code: |-
+        return MaybePrefixContainerPageState(*navigation,
+                                             std::move(sanitized_page_state));
+
+  - description: |-
+      Drop the PageState of all chrome:// URLs.
+
+      A stale PageState can outlive a page's own URL rewrite or cleanup (an
+      extension NTP override, or an OAuth callback page's
+      history.replaceState()) and be restored verbatim, reintroducing a URL the
+      page already moved past. Upstream only handles the NTP override case. An
+      empty PageState is synthesized on restore from the entry's current URL.
+    preempt_function_impl:
+      function_name: ContentSerializedNavigationDriver::GetSanitizedPageStateForPickle
+      code: |-
+        if (navigation->virtual_url().SchemeIs(content::kChromeUIScheme)) {
+          return std::string();
+        }
+
+  - description: |-
+      Restore Brave state of navigations loaded from disk or sync.
+
+      Previously saved brave:// URLs are restored as chrome://, and Containers
+      tabs get their storage partition key parsed out of the virtual URL prefix.
+      See docs/containers/session_persistence.md.
+    preempt_function_impl:
+      function_name: ContentSerializedNavigationDriver::Sanitize
+      code: |-
+        RestoreBraveSchemeAsChromeScheme(*navigation);
+        MaybeRestoreContainerStoragePartitionKey(*navigation);

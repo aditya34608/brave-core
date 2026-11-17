@@ -210,15 +210,34 @@ class TabGridViewModel {
     }
   }
 
-  /// Moves tabs to where the item at `itemIndex` is. Dropping on a group moves the tabs before the group's first tab.
-  func moveTabs(_ tabs: [TabState.ID], toItemIndex itemIndex: Int) {
-    let tabIndex: Int
-    if let item = items[safe: itemIndex], let firstTab = item.tabs.first {
-      tabIndex = self.tabs.firstIndex(where: { $0 === firstTab }) ?? self.tabs.count
-    } else {
-      tabIndex = self.tabs.count
+  /// Moves tabs into the post-move item slot. The dragged tabs are taken out of the grid first, and
+  /// the slot is read against what remains. A slot on a group inserts before that group's first tab.
+  /// A slot past the last remaining item appends after it.
+  func moveTabs(_ tabsToMove: [TabState.ID], toItemIndex itemIndex: Int) {
+    let moved = Set(tabsToMove)
+    let remainingItems = items.filter { item in
+      guard case .tab(let tab) = item else { return true }
+      return !moved.contains(tab.id)
     }
-    tabManager.moveTabs(tabs, toIndex: tabIndex)
+    let modeTabs = tabManager.tabsForCurrentMode
+    // `moveTabs` inserts after the dragged tabs have been removed.
+    let movedBefore = { (index: Int) in
+      modeTabs[..<index].filter { moved.contains($0.id) }.count
+    }
+    let destination: Int
+    if let item = remainingItems[safe: itemIndex],
+      let firstTab = item.tabs.first,
+      let targetIndex = modeTabs.firstIndex(where: { $0 === firstTab })
+    {
+      destination = targetIndex - movedBefore(targetIndex)
+    } else if let lastTab = remainingItems.last?.tabs.last,
+      let targetIndex = modeTabs.firstIndex(where: { $0 === lastTab })
+    {
+      destination = targetIndex + 1 - movedBefore(targetIndex + 1)
+    } else {
+      destination = modeTabs.count
+    }
+    tabManager.moveTabs(tabsToMove, toIndex: destination)
     updateTabs()
   }
 

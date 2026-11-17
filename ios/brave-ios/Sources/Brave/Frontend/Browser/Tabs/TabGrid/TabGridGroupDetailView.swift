@@ -27,6 +27,13 @@ struct TabGroupDetailView: View {
   @State private var selectedTabs: Set<TabState.ID> = []
   @State private var isShredAlertPresented = false
   @State private var isShredAnimationVisible = false
+  @State private var activeShredMode: ActiveShredMode?
+
+  private enum ActiveShredMode: Equatable {
+    case selectedTab
+    case selectedTabs
+    case allTabs
+  }
 
   private var browserColors: BrowserColors {
     viewModel.isPrivateBrowsing ? .privateMode : .standard
@@ -118,19 +125,29 @@ struct TabGroupDetailView: View {
     }
     .alert(
       Strings.Shields.shredSiteDataConfirmationTitle,
-      isPresented: $isShredAlertPresented
-    ) {
+      isPresented: $isShredAlertPresented,
+      presenting: activeShredMode
+    ) { _ in
       Button(role: .destructive) {
         isShredAnimationVisible = true
       } label: {
         Text(Strings.Shields.shredDataButtonTitle)
       }
       .keyboardShortcut(.defaultAction)
-    } message: {
-      Text(Strings.Shields.shredSiteSelectedTabsConfirmationMessage)
+    } message: { shredMode in
+      let message =
+        switch shredMode {
+        case .allTabs:
+          Strings.Shields.shredSiteAllTabsConfirmationMessage
+        case .selectedTabs:
+          Strings.Shields.shredSiteSelectedTabsConfirmationMessage
+        case .selectedTab:
+          Strings.Shields.shredSiteDataConfirmationMessage
+        }
+      Text(message)
     }
     .overlay {
-      if isShredAnimationVisible {
+      if isShredAnimationVisible, let shredMode = activeShredMode {
         LottieView(animation: .named("shred", bundle: .module))
           .configure { view in
             view.contentMode = .scaleAspectFill
@@ -139,13 +156,21 @@ struct TabGroupDetailView: View {
           .playing(loopMode: .playOnce)
           .animationDidFinish { _ in
             let originalTabIDs = Set(viewModel.tabs.map(\.id))
-            var dismissAfterShred = originalTabIDs.count == 1
-            let affectedTabIDs = viewModel.shredSelectedTabs(selectedTabs)
-            if !dismissAfterShred {
-              dismissAfterShred = originalTabIDs.count == affectedTabIDs.count
+            var dismissAfterShred = originalTabIDs.count == 1 || shredMode == .allTabs
+            switch shredMode {
+            case .selectedTab:
+              viewModel.shredSelectedTab()
+            case .selectedTabs:
+              let affectedTabIDs = viewModel.shredSelectedTabs(selectedTabs)
+              if !dismissAfterShred {
+                dismissAfterShred = originalTabIDs.count == affectedTabIDs.count
+              }
+            case .allTabs:
+              viewModel.shredAllTabs()
             }
             withAnimation {
               isShredAnimationVisible = false
+              activeShredMode = nil
               editMode = .inactive
               selectedTabs = []
             }
@@ -218,6 +243,25 @@ struct TabGroupDetailView: View {
       } label: {
         Label(Strings.TabGrid.selectTabsButtonTitle, braveSystemImage: "leo.check.circle-outline")
       }
+      Menu {
+        Button {
+          activeShredMode = .selectedTab
+          isShredAlertPresented = true
+        } label: {
+          Text(Strings.TabGrid.shredSelectedTabButtonTitle)
+        }
+        .disabled(!viewModel.isSelectedTabShredAvailable)
+        Button(role: .destructive) {
+          activeShredMode = .allTabs
+          isShredAlertPresented = true
+        } label: {
+          Text(Strings.TabGrid.shredAllTabsButtonTitle)
+        }
+        .disabled(!viewModel.isShredMenuVisible)
+      } label: {
+        Label(Strings.TabGrid.shredTabsAccessibilityLabel, braveSystemImage: "leo.shred.data")
+      }
+      .disabled(!viewModel.isShredMenuVisible)
       Button(role: .destructive) {
         // Closing every remaining tab leaves nothing to go back to
         let dismissAfterClose = viewModel.closesAllTabs(in: group)
@@ -312,6 +356,7 @@ struct TabGroupDetailView: View {
   private var selectionFooter: some View {
     HStack {
       Button {
+        activeShredMode = .selectedTabs
         isShredAlertPresented = true
       } label: {
         Label(Strings.TabGrid.shredSelectedTabsButtonTitle, braveSystemImage: "leo.shred.data")

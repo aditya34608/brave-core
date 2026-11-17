@@ -37,6 +37,8 @@ class TabGridGroupItemViewModel {
 }
 
 struct TabGridGroupItemView: View {
+  @Environment(\.editMode) private var editMode
+
   enum Action {
     case ungroup
     case closeAllTabs
@@ -59,7 +61,9 @@ struct TabGridGroupItemView: View {
             String.localizedStringWithFormat(Strings.TabGrid.tabsCountFormat, viewModel.tabCount)
           )
         Spacer()
-        optionsMenu
+        if editMode?.wrappedValue != .active {
+          optionsMenu
+        }
       }
       .padding(8)
       .font(.caption2.weight(.semibold))

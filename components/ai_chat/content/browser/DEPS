@@ -33,4 +33,5 @@ include_rules = [
   "+third_party/skia/include",
   "+ui/base",
   "+ui/gfx",
+  "+ui/webui/webui_allowlist.h",
 ]

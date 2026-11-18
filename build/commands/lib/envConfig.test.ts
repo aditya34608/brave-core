@@ -290,6 +290,65 @@ describe('EnvConfig', () => {
     })
   })
 
+  describe('with a restriction', () => {
+    const dotenvKeys = ['rbe_service']
+
+    beforeEach(() => {
+      mockFiles[packageJsonPath] = {
+        version: '1.2.3',
+        config: {
+          projects: { chrome: { tag: '1.0', custom_vars: { a: true } } },
+        },
+      }
+      mockFiles[envPath] = ['rbe_service=rbe.example.com:443']
+      envConfig = new EnvConfig(configDir, undefined, dotenvKeys)
+    })
+
+    it('reads the allowed .env keys', () => {
+      expect(envConfig.getString(['rbe_service'])).toBe('rbe.example.com:443')
+    })
+
+    it('reads what package.json provides', () => {
+      expect(envConfig.getString(['projects', 'chrome', 'tag'])).toBe('1.0')
+      expect(
+        envConfig.getMergedObject(['projects', 'chrome', 'custom_vars']),
+      ).toEqual({ a: true })
+    })
+
+    it('reads an unset key under an object package.json sets', () => {
+      expect(envConfig.getString(['projects', 'chrome', 'revision'])).toBe(
+        undefined,
+      )
+    })
+
+    it('throws when reading anything else, even with a default', () => {
+      expect(() => envConfig.getBoolean(['gclient_verbose'], false)).toThrow(
+        'gclient_verbose is read, but with --builder only rbe_service are '
+          + 'read from .env, and package.json does not provide it.',
+      )
+      expect(() => envConfig.getMergedObject(['gn', 'args'])).toThrow(
+        'gn_args is read',
+      )
+    })
+
+    it('errors on any other .env key', () => {
+      mockFiles[envPath] = ['rbe_service=x', 'gclient_verbose=true', 'b=1']
+      expect(() => new EnvConfig(configDir, undefined, dotenvKeys)).toThrow(
+        'process.exit called',
+      )
+      expect(Log.error).toHaveBeenCalledWith(
+        '.env has keys --builder does not allow: b, gclient_verbose. '
+          + 'It allows only rbe_service.',
+      )
+    })
+
+    it('is checked on given .env variables too', () => {
+      expect(
+        () => new EnvConfig(configDir, { other: 'x' }, dotenvKeys),
+      ).toThrow('process.exit called')
+    })
+  })
+
   describe('getMergedObject', () => {
     beforeEach(() => {
       mockFiles[packageJsonPath] = {

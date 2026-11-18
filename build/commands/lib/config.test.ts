@@ -37,6 +37,29 @@ describe('config', () => {
   })
 })
 
+describe('Config', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('reads a property from .env until it is set', () => {
+    const installed = mockConfig({ siso_cache_dir: '/siso' })
+    expect(installed.sisoCacheDir).toBe('/siso')
+    installed.sisoCacheDir = undefined
+    expect(installed.sisoCacheDir).toBeUndefined()
+  })
+
+  it('validates target_os from .env as when it is set', () => {
+    const exit = jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('exit')
+    })
+    jest.spyOn(console, 'error').mockImplementation(() => {})
+    expect(mockConfig({ target_os: 'android' }).targetOS).toBe('android')
+    expect(() => mockConfig({ target_os: 'beos' }).targetOS).toThrow('exit')
+    expect(exit).toHaveBeenCalledWith(1)
+  })
+})
+
 describe('mockConfig', () => {
   it('takes its .env values from the test', () => {
     expect(mockConfig().gclientVerbose).toBe(false)

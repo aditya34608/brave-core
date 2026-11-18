@@ -1136,6 +1136,13 @@ extension Strings {
       value: "%lld Tabs",
       comment: "A label in the tab tray mode switcher showing how many regular tabs are open e.g. '129 Tabs'"
     )
+    public static let tabGroupsModeTitle = NSLocalizedString(
+      "tabGrid.tabGroupsModeTitle",
+      tableName: "BraveShared",
+      bundle: .module,
+      value: "Groups",
+      comment: "A label in the tab tray mode switcher for the list of tab groups"
+    )
     public static let privateBrowsingModeTitle = NSLocalizedString(
       "tabGrid.privateBrowsingModeTitle",
       tableName: "BraveShared",

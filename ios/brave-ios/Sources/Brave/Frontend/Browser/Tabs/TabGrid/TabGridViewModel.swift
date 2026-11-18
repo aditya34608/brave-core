@@ -28,6 +28,7 @@ class TabGridViewModel {
   private(set) var isOpenGroupRestored = false
   private var isNamingOpenGroup = false
   private(set) var isPrivateTabsLocked: Bool = false
+  private(set) var showsTabGroups = false
   var onModeSwitchComplete: (() -> Void)?
   private(set) var isSceneActive: Bool = true
 
@@ -250,6 +251,31 @@ class TabGridViewModel {
     tabManager.canGroupTabsForCurrentMode
   }
 
+  /// The mode switcher can offer tab groups. Independent of the current browsing mode, which
+  /// would otherwise hide the segment while private tabs are showing.
+  var isTabGroupsEnabled: Bool {
+    tabManager.isTabGroupsEnabled && !Preferences.Privacy.privateBrowsingOnly.value
+  }
+
+  /// Selects a segment of the mode switcher. Tab groups stay in regular browsing.
+  func selectTabGridSegment(_ index: Int, segmentCount: Int) {
+    let showsGroups = segmentCount > 2 && index == 1
+    let isPrivate = index == segmentCount - 1
+    let groupsChanged = showsTabGroups != showsGroups
+    let privateChanged = _isPrivateBrowsing != isPrivate
+    guard groupsChanged || privateChanged else { return }
+
+    if groupsChanged {
+      closeOpenGroup()
+      showsTabGroups = showsGroups
+    }
+    if privateChanged {
+      isPrivateBrowsing = isPrivate
+    } else {
+      updateTabs()
+    }
+  }
+
   var tabGroups: [TabGroup] {
     tabManager.tabGroups
   }
@@ -257,6 +283,19 @@ class TabGridViewModel {
   func addTabs(_ tabIDs: Set<TabState.ID>, to group: TabGroup) {
     withAnimation {
       tabManager.addTabs(currentModeTabs(with: tabIDs), to: group)
+    }
+  }
+
+  /// Creates a group containing a new tab and opens it, ready for the user to give it a name.
+  /// A group cannot be empty, so the new tab is what keeps it.
+  func createGroup() {
+    withAnimation {
+      let tab = tabManager.addTabAndSelect(isPrivate: false)
+      guard
+        let group = tabManager.createTabGroup(title: defaultGroupTitle, adding: [tab])
+      else { return }
+      isNamingOpenGroup = true
+      showGroup(group)
     }
   }
 
@@ -401,10 +440,14 @@ class TabGridViewModel {
   private func updateTabs() {
     let query = isSearching && !searchQuery.isEmpty ? searchQuery : nil
     tabs = tabManager.tabsForCurrentMode(for: query)
-    // Search results are shown flat so that matches inside a group remain visible
-    items =
-      query != nil
-      ? tabs.map { TabGridItem.tab($0) } : TabGridItem.items(for: tabs, using: tabManager)
+    if showsTabGroups && !isPrivateBrowsing && query == nil {
+      items = TabGridItem.items(for: tabs, using: tabManager).filter(\.isGroup)
+    } else if query != nil {
+      // Search results are shown flat so that matches inside a group remain visible
+      items = tabs.map { TabGridItem.tab($0) }
+    } else {
+      items = TabGridItem.items(for: tabs, using: tabManager)
+    }
     updateOpenGroupItems()
   }
 
@@ -429,6 +472,9 @@ class TabGridViewModel {
 
   private func browsingModeWillSwitch(to newValue: Bool) {
     // Groups only exist in regular browsing
+    if newValue {
+      showsTabGroups = false
+    }
     closeOpenGroup()
     // Record the selected index before mode navigation
     if !newValue {

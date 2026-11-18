@@ -448,15 +448,18 @@ struct TabGridView: View {
       }
       if !viewModel.tabs.isEmpty {
         Section {
-          Button {
-            withAnimation {
-              editMode = .active
+          // Group tiles cannot be multi-selected
+          if !viewModel.showsTabGroups {
+            Button {
+              withAnimation {
+                editMode = .active
+              }
+            } label: {
+              Label(
+                Strings.TabGrid.selectTabsButtonTitle,
+                braveSystemImage: "leo.check.circle-outline"
+              )
             }
-          } label: {
-            Label(
-              Strings.TabGrid.selectTabsButtonTitle,
-              braveSystemImage: "leo.check.circle-outline"
-            )
           }
           Button(role: .destructive) {
             viewModel.closeAllTabs()
@@ -477,13 +480,16 @@ struct TabGridView: View {
 
   var shredMenu: some View {
     Menu {
-      Button {
-        isShredAlertPresented = true
-        activeShredMode = .selectedTab
-      } label: {
-        Text(Strings.TabGrid.shredSelectedTabButtonTitle)
+      // There is no selected tab to shred while the grid is showing groups
+      if !viewModel.showsTabGroups {
+        Button {
+          isShredAlertPresented = true
+          activeShredMode = .selectedTab
+        } label: {
+          Text(Strings.TabGrid.shredSelectedTabButtonTitle)
+        }
+        .disabled(!viewModel.isSelectedTabShredAvailable)
       }
-      .disabled(!viewModel.isSelectedTabShredAvailable)
       Button(role: .destructive) {
         isShredAlertPresented = true
         activeShredMode = .allTabs
@@ -502,15 +508,23 @@ struct TabGridView: View {
   var footerBar: some View {
     HStack {
       Button {
-        viewModel.addTab()
-        // Let the tab show up in the collection view first
-        DispatchQueue.main.async { [self] in
-          dismiss()
-          didAddTab()
+        if viewModel.showsTabGroups {
+          viewModel.createGroup()
+        } else {
+          viewModel.addTab()
+          // Let the tab show up in the collection view first
+          DispatchQueue.main.async { [self] in
+            dismiss()
+            didAddTab()
+          }
         }
       } label: {
-        Label(Strings.TabGrid.newTabAccessibilityLabel, braveSystemImage: "leo.plus.add")
-          .labelStyle(.buttonIconOnly)
+        Label(
+          viewModel.showsTabGroups
+            ? Strings.TabGrid.createNewGroupMenuTitle : Strings.TabGrid.newTabAccessibilityLabel,
+          braveSystemImage: "leo.plus.add"
+        )
+        .labelStyle(.buttonIconOnly)
       }
       .addTabIconButtonStyle()
       .keyboardShortcut("t", modifiers: [.command])
@@ -518,7 +532,10 @@ struct TabGridView: View {
 
       if !privateBrowsingOnly.value {
         TabGridModeSwitcher(
-          isPrivateBrowsing: $viewModel.isPrivateBrowsing,
+          viewModel: viewModel,
+          isPrivateBrowsing: viewModel.isPrivateBrowsing,
+          showsTabGroups: viewModel.showsTabGroups,
+          includesTabGroups: viewModel.isTabGroupsEnabled,
           regularTabCount: viewModel.regularTabCount
         )
         .scaledToFit()
@@ -872,7 +889,10 @@ private struct TabGridLegacyAddTabButtonStyle: ButtonStyle {
 // We must use a UISegmentedControl directly as you cannot change the height of a PickerView using
 // a segmented picker style
 private struct TabGridModeSwitcher: UIViewRepresentable {
-  @Binding var isPrivateBrowsing: Bool
+  var viewModel: TabGridViewModel
+  var isPrivateBrowsing: Bool
+  var showsTabGroups: Bool
+  var includesTabGroups: Bool
   var regularTabCount: Int
 
   private var tabCount: String {
@@ -927,10 +947,11 @@ private struct TabGridModeSwitcher: UIViewRepresentable {
   }
 
   func makeUIView(context: Context) -> UISegmentedControl {
-    let items: [Any] = [
-      tabCount,
-      Strings.TabGrid.privateBrowsingModeTitle,
-    ]
+    var items: [Any] = [tabCount]
+    if includesTabGroups {
+      items.append(Strings.TabGrid.tabGroupsModeTitle)
+    }
+    items.append(Strings.TabGrid.privateBrowsingModeTitle)
     let uiView: UISegmentedControl
     if #available(iOS 26.0, *) {
       uiView = GlassBackedSegmentedControl(items: items)
@@ -939,7 +960,10 @@ private struct TabGridModeSwitcher: UIViewRepresentable {
     }
     uiView.addAction(
       .init(handler: { [unowned uiView] _ in
-        isPrivateBrowsing = uiView.selectedSegmentIndex == 1
+        viewModel.selectTabGridSegment(
+          uiView.selectedSegmentIndex,
+          segmentCount: uiView.numberOfSegments
+        )
       }),
       for: .valueChanged
     )
@@ -949,7 +973,11 @@ private struct TabGridModeSwitcher: UIViewRepresentable {
 
   func updateUIView(_ uiView: UISegmentedControl, context: Context) {
     uiView.setTitle(tabCount, forSegmentAt: 0)
-    uiView.selectedSegmentIndex = isPrivateBrowsing ? 1 : 0
+    if includesTabGroups {
+      uiView.selectedSegmentIndex = isPrivateBrowsing ? 2 : (showsTabGroups ? 1 : 0)
+    } else {
+      uiView.selectedSegmentIndex = isPrivateBrowsing ? 1 : 0
+    }
     uiView.backgroundColor = UIColor(
       braveSystemName: isPrivateBrowsing ? .privateWindow10 : .neutral10
     )

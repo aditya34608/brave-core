@@ -70,9 +70,9 @@ class RenderTest(unittest.TestCase):
             {'tests': '4', 'failures': '1', 'errors': '1', 'skipped': '1'},
         )
         self.assertEqual(root.get('time'), '6.000')
-        foo = root.find("testsuite[@name='FooTest']")
-        self.assertEqual(foo.get('tests'), '2')
-        self.assertEqual(foo.get('failures'), '1')
+        foo_case = root.find("testsuite[@name='FooTest']")
+        self.assertEqual(foo_case.get('tests'), '2')
+        self.assertEqual(foo_case.get('failures'), '1')
         passes = _testcase(root, 'Passes')
         self.assertEqual(passes.get('classname'), 'FooTest')
         self.assertEqual(passes.get('time'), '1.500')

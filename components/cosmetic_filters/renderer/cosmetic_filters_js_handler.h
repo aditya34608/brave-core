@@ -13,6 +13,7 @@
 
 #include "base/memory/raw_ptr.h"
 #include "base/memory/weak_ptr.h"
+#include "brave/components/brave_shields/core/common/brave_shields.mojom.h"
 #include "brave/components/cosmetic_filters/common/cosmetic_filters.mojom.h"
 #include "content/public/renderer/render_frame.h"
 #include "content/public/renderer/render_frame_observer.h"
@@ -80,6 +81,7 @@ class CosmeticFiltersJSHandler : public mojom::CosmeticFiltersAgent {
   bool OnIsFirstParty(const std::string& url_string);
   void OnAddSiteCosmeticFilter(const std::string& selector);
   void OnManageCustomFilters();
+  void OnLinkPressed(const std::string& url);
   v8::Local<v8::Value> GetPlatform(v8::Isolate* isolate);
   v8::Local<v8::Promise> GetCosmeticFilterThemeInfo(v8::Isolate* isolate);
   void OnGetCosmeticFilterThemeInfo(
@@ -107,6 +109,8 @@ class CosmeticFiltersJSHandler : public mojom::CosmeticFiltersAgent {
   GetElementPickerRemoteHandler();
   mojo::AssociatedRemote<cosmetic_filters::mojom::CosmeticFiltersHandler>
       element_picker_actions_handler_;
+  mojo::AssociatedRemote<brave_shields::mojom::BraveShieldsHost>
+      brave_shields_host_;
   raw_ptr<content::RenderFrame> render_frame_ = nullptr;
   mojo::Remote<mojom::CosmeticFiltersResources> cosmetic_filters_resources_;
   mojo::AssociatedReceiver<mojom::CosmeticFiltersAgent> receiver_{this};

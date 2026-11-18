@@ -236,6 +236,10 @@ void BraveShieldsWebContentsObserver::OnJavaScriptAllowedOnce(
 #endif
 }
 
+void BraveShieldsWebContentsObserver::OnLinkPressed(const GURL& url) {
+  last_pressed_link_ = url;
+}
+
 void BraveShieldsWebContentsObserver::OnWebcompatFeatureInvoked(
     ContentSettingsType webcompat_settings_type) {
 #if !BUILDFLAG(IS_ANDROID)
@@ -290,6 +294,10 @@ void BraveShieldsWebContentsObserver::ReadyToCommitNavigation(
       // we only reset the counter for blocked URLs, not the one for scripts.
       blocked_url_paths_.clear();
     }
+  }
+
+  if (navigation_handle->IsInPrimaryMainFrame()) {
+    last_pressed_link_ = GURL();
   }
 
   SendShieldsSettings(navigation_handle);

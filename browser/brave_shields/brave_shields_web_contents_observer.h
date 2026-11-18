@@ -18,6 +18,7 @@
 #include "content/public/browser/render_frame_host_receiver_set.h"
 #include "content/public/browser/web_contents_observer.h"
 #include "content/public/browser/web_contents_user_data.h"
+#include "url/gurl.h"
 
 namespace content {
 class WebContents;
@@ -63,6 +64,7 @@ class BraveShieldsWebContentsObserver
   void AllowScriptsOnce(const std::vector<std::string>& origins);
   void BlockAllowedScripts(const std::vector<std::string>& origins);
   bool IsBlockedSubresource(const std::string& subresource);
+  const GURL& last_pressed_link() const { return last_pressed_link_; }
   void AddBlockedSubresource(const std::string& subresource);
 
  protected:
@@ -75,6 +77,7 @@ class BraveShieldsWebContentsObserver
   void OnJavaScriptAllowedOnce(const std::u16string& details) override;
   void OnWebcompatFeatureInvoked(
       ContentSettingsType webcompat_settings_type) override;
+  void OnLinkPressed(const GURL& url) override;
 
  private:
   friend class content::WebContentsUserData<BraveShieldsWebContentsObserver>;
@@ -99,6 +102,7 @@ class BraveShieldsWebContentsObserver
   // We keep a set of the current page's blocked URLs in case the page
   // continually tries to load the same blocked URLs.
   std::set<std::string> blocked_url_paths_;
+  GURL last_pressed_link_;
 
   content::RenderFrameHostReceiverSet<brave_shields::mojom::BraveShieldsHost>
       receivers_;

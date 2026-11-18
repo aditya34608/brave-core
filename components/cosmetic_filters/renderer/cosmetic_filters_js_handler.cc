@@ -79,6 +79,28 @@ constexpr char kPreInitScript[] =
           %s
         })();)";
 
+// Lets the browser tell a window opened for a pressed link from a popup.
+constexpr char kReportPressedLinksScript[] =
+    R"((function() {
+          const CC = window.content_cosmetic;
+          if (CC.reportsPressedLinks) {
+            return;
+          }
+          CC.reportsPressedLinks = true;
+          const report = (event) => {
+            if (!event.isTrusted || !(event.target instanceof Element)) {
+              return;
+            }
+            const link = event.target.closest('a[href]');
+            if (link && typeof link.href === 'string') {
+              cf_worker.linkPressed(link.href);
+            }
+          };
+          // A link opened from the keyboard only fires click.
+          document.addEventListener('mousedown', report, true);
+          document.addEventListener('click', report, true);
+        })();)";
+
 constexpr char kCosmeticFilteringInitScript[] =
     R"({
         const CC = window.content_cosmetic
@@ -304,6 +326,15 @@ void CosmeticFiltersJSHandler::OnAddSiteCosmeticFilter(
   GetElementPickerRemoteHandler()->AddSiteCosmeticFilter(selector);
 }
 
+void CosmeticFiltersJSHandler::OnLinkPressed(const std::string& url) {
+  if (!brave_shields_host_.is_bound()) {
+    render_frame_->GetRemoteAssociatedInterfaces()->GetInterface(
+        &brave_shields_host_);
+    brave_shields_host_.reset_on_disconnect();
+  }
+  brave_shields_host_->OnLinkPressed(GURL(url));
+}
+
 void CosmeticFiltersJSHandler::OnManageCustomFilters() {
   GetElementPickerRemoteHandler()->ManageCustomFilters();
 }
@@ -521,6 +552,10 @@ void CosmeticFiltersJSHandler::BindFunctionsToObject(
       base::BindRepeating(&CosmeticFiltersJSHandler::OnAddSiteCosmeticFilter,
                           base::Unretained(this)));
   BindFunctionToObject(
+      isolate, javascript_object, "linkPressed",
+      base::BindRepeating(&CosmeticFiltersJSHandler::OnLinkPressed,
+                          base::Unretained(this)));
+  BindFunctionToObject(
       isolate, javascript_object, "manageCustomFilters",
       base::BindRepeating(&CosmeticFiltersJSHandler::OnManageCustomFilters,
                           base::Unretained(this)));
@@ -726,6 +761,13 @@ void CosmeticFiltersJSHandler::ApplyRules(bool de_amp_enabled) {
       isolated_world_id_,
       blink::WebScriptSource(blink::WebString::FromUtf8(pre_init_script)),
       blink::BackForwardCacheAware::kAllow);
+  if (base::FeatureList::IsEnabled(bf::kBraveAdblockPopupBlocking)) {
+    web_frame->ExecuteScriptInIsolatedWorld(
+        isolated_world_id_,
+        blink::WebScriptSource(
+            blink::WebString::FromUtf8(kReportPressedLinksScript)),
+        blink::BackForwardCacheAware::kAllow);
+  }
 
   const std::string* procedural_actions_script =
       resources_dict_->FindString("procedural_actions_script");

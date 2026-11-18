@@ -1,0 +1,19 @@
+diff --git a/chrome/browser/image_fetcher/BUILD.gn b/chrome/browser/image_fetcher/BUILD.gn
+index c79ad77b32c423de0246cf56175446f50ae38eb6..984dbfc3952985e757eb745a022e238d4a86c3b5 100644
+--- a/chrome/browser/image_fetcher/BUILD.gn
++++ b/chrome/browser/image_fetcher/BUILD.gn
+@@ -15,11 +15,14 @@ source_set("image_fetcher") {
+     "//chrome/browser/image_decoder",
+     "//chrome/browser/net",
+     "//chrome/browser/profiles",
++    "//chrome/browser/transition_manager",
+     "//chrome/common:constants",
+     "//components/image_fetcher/core",
+     "//components/image_fetcher/core/cache",
+     "//components/keyed_service/core",
+     "//content/public/browser",
++    "//services/network/public/cpp",
++    "//services/network/public/mojom",
+   ]
+ 
+   if (is_android) {

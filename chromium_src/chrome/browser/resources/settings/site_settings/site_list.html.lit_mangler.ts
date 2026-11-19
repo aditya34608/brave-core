@@ -20,3 +20,20 @@ mangle(
   },
   (template) => template.text.includes('id="actionMenu"'),
 )
+
+// The third-party cookie exceptions list says that Shields controls cookies.
+mangle(
+  (root) => {
+    const header = root.querySelector('#listHeader')
+    if (!header) {
+      throw new Error(`[Settings] site-list: couldn't find #listHeader`)
+    }
+    const wrapper = header.ownerDocument.createElement('div')
+    header.replaceWith(wrapper)
+    wrapper.append(header)
+    wrapper.insertAdjacentHTML('beforeend',
+      '${this.cookiesExceptionType === \'third-party\' ? html`'
+      + '<b>$i18n{cookieControlledByShieldsHeader}</b>` : \'\'}')
+  },
+  (template) => template.text.includes('id="listHeader"'),
+)

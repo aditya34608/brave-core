@@ -110,3 +110,42 @@ suite('BraveSiteListCookieType', () => {
     assertTrue(!resets[1]!.hasAttribute('disabled'))
   })
 })
+
+// Only the third-party cookie exceptions list says that Shields controls
+// cookies.
+suite('BraveSiteListCookiesHeader', () => {
+  let testElement: SiteListElement
+
+  setup(() => {
+    SiteSettingsBrowserProxyImpl.setInstance(new TestSiteSettingsBrowserProxy())
+    document.body.replaceChildren()
+    testElement = document.createElement('site-list')
+    testElement.searchFilter = ''
+    document.body.appendChild(testElement)
+  })
+
+  async function setUpList(type?: CookiesExceptionType) {
+    testElement.cookiesExceptionType = type
+    testElement.categorySubtype = ContentSetting.ALLOW
+    testElement.category = ContentSettingsTypes.COOKIES
+    await microtasksFinished()
+  }
+
+  test('third-party exceptions show the Shields header', async () => {
+    await setUpList(CookiesExceptionType.THIRD_PARTY)
+
+    const shieldsHeader = testElement.$.listHeader.parentElement!
+        .querySelector('b')
+    assertTrue(!!shieldsHeader)
+    assertEquals(loadTimeData.getString('cookieControlledByShieldsHeader'),
+        shieldsHeader.textContent.trim())
+  })
+
+  test('other exceptions have no Shields header', async () => {
+    await setUpList(CookiesExceptionType.SITE_DATA)
+    assertEquals(null, testElement.shadowRoot.querySelector('#listHeader + b'))
+
+    await setUpList(undefined)
+    assertEquals(null, testElement.shadowRoot.querySelector('#listHeader + b'))
+  })
+})

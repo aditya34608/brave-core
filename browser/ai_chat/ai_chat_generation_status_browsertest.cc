@@ -189,7 +189,6 @@ class AIChatGenerationStatusBrowserTest
     return tool;
   }
 
-  // Releases a held response with a request to use the permission tool.
   void RequestPermissionToolUse(MockGenerateCallbacks response) {
     ReleaseResponse(std::move(response),
                     mojom::ConversationEntryEvent::NewToolUseEvent(
@@ -419,7 +418,6 @@ IN_PROC_BROWSER_TEST_F(AIChatGenerationStatusBrowserTest,
   ASSERT_TRUE(
       WaitForRowIndicator(other_page, uuid, kAwaitingUserInputIndicator));
 
-  // Opening the conversation clears the warning.
   NavigateToConversationUI(uuid);
   ASSERT_TRUE(WaitForRowIndicator(other_page, uuid, kNoIndicator));
 
@@ -459,7 +457,6 @@ IN_PROC_BROWSER_TEST_F(AIChatGenerationStatusBrowserTest,
   MockTool* tool = AddPermissionTool();
   EXPECT_CALL(*tool, UseTool).Times(0);
 
-  // This page keeps its new chat open throughout.
   content::RenderFrameHost* other_page = OpenFullPageOnNewChat();
   RequestPermissionToolUse(std::move(response));
   ASSERT_TRUE(

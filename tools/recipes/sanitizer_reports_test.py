@@ -20,7 +20,7 @@ from sanitizer_reports import Frame, Sanitizer
 USE_AFTER_FREE = """\
 [ RUN      ] FooTest.Frees
 =================================================================
-==4242==ERROR: AddressSanitizer: heap-use-after-free on address 0x6020 at pc 0x55 bp 0x7f sp 0x7e
+==4242==ERROR: AddressSanitizer: heap-use-after-free on address 0x6020 at pc 0x55
 READ of size 8 at 0x6020 thread T0
     #0 0x55 in brave::Foo::Bar(int) const ../../brave/foo.cc:12:3
     #1 0x56 in brave::Foo::Run() ../../brave/foo.cc:30:5
@@ -69,7 +69,7 @@ Indirect leak of 128 byte(s) in 2 object(s) allocated from:
     #0 0x10 in __interceptor_malloc ??:0:0
     #1 0x11 in __rustc::__rust_alloc build/rust/allocator/lib.rs:74:20
     #2 0x12 in <alloc::boxed::Box<skus::Task>>::new library/alloc/src/boxed.rs:1:1
-    #3 0x13 in <skus::SDK<skus::Client>>::summary brave/components/skus/lib.rs:367:20
+    #3 0x13 in <skus::SDK<skus::Client>>::summary brave/skus/lib.rs:367:20
 
 Indirect leak of 8 byte(s) in 1 object(s) allocated from:
     #0 0x10 in __interceptor_malloc ??:0:0
@@ -113,9 +113,16 @@ def _parse(output: str) -> m.RunReports:
     return parser.result
 
 
+def _only_report(output: str) -> m.Report:
+    reports = _parse(output).reports
+    if len(reports) != 1:
+        raise AssertionError(f'expected one report, got {reports}')
+    return reports[0]
+
+
 class ReportParserTest(unittest.TestCase):
     def test_an_address_sanitizer_error_is_about_its_first_stack(self):
-        (report,) = _parse(USE_AFTER_FREE).reports
+        report = _only_report(USE_AFTER_FREE)
         self.assertEqual(report.sanitizer, Sanitizer.ADDRESS)
         self.assertEqual(report.kind, 'heap-use-after-free')
         self.assertEqual(
@@ -156,7 +163,7 @@ class ReportParserTest(unittest.TestCase):
         self.assertNotIn('Indirect leak', reports[0].text)
 
     def test_indirect_leaks_alone_are_one_finding(self):
-        (report,) = _parse(INDIRECT_LEAKS).reports
+        report = _only_report(INDIRECT_LEAKS)
         self.assertEqual(report.kind, 'indirect-leak')
         self.assertEqual(
             report.signature,
@@ -165,7 +172,7 @@ class ReportParserTest(unittest.TestCase):
         self.assertIn('skus::initialize_sdk', report.text)
 
     def test_a_memory_sanitizer_warning(self):
-        (report,) = _parse(UNINITIALISED).reports
+        report = _only_report(UNINITIALISED)
         self.assertEqual(report.sanitizer, Sanitizer.MEMORY)
         self.assertEqual(
             report.signature,
@@ -174,7 +181,7 @@ class ReportParserTest(unittest.TestCase):
         )
 
     def test_an_undefined_behaviour_without_a_stack_names_its_line(self):
-        (report,) = _parse(OVERFLOW).reports
+        report = _only_report(OVERFLOW)
         self.assertEqual(report.sanitizer, Sanitizer.UNDEFINED)
         self.assertEqual(report.kind, 'signed integer overflow')
         self.assertEqual(report.frames, (Frame('', 'brave/math.cc:14:12'),))
@@ -185,7 +192,7 @@ class ReportParserTest(unittest.TestCase):
         )
 
     def test_a_data_race(self):
-        (report,) = _parse(DATA_RACE).reports
+        report = _only_report(DATA_RACE)
         self.assertEqual(report.sanitizer, Sanitizer.THREAD)
         self.assertEqual(report.kind, 'data race')
         self.assertEqual(
@@ -215,8 +222,8 @@ class ReportParserTest(unittest.TestCase):
         )
 
     def test_a_report_cut_off_is_kept(self):
-        cut_off = USE_AFTER_FREE.split('SUMMARY')[0]
-        (report,) = _parse(cut_off).reports
+        cut_off = USE_AFTER_FREE.split('SUMMARY', maxsplit=1)[0]
+        report = _only_report(cut_off)
         self.assertEqual(report.kind, 'heap-use-after-free')
         self.assertEqual(report.summary, '')
 

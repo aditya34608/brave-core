@@ -1,5 +1,5 @@
 diff --git a/config/gni/devtools_grd_files.gni b/config/gni/devtools_grd_files.gni
-index 16516073e2fd42a5d714df767f917e7220d7ef5b..ac92be4e0e5fcb746ed97c7666a737e151a1bfe1 100644
+index 6b74278224d2a2dadc4192bea5eb4924024f9397..a865269b45ed685e4e6739595a8d86f92d86d8fe 100644
 --- a/config/gni/devtools_grd_files.gni
 +++ b/config/gni/devtools_grd_files.gni
 @@ -9,6 +9,8 @@
@@ -11,7 +11,7 @@ index 16516073e2fd42a5d714df767f917e7220d7ef5b..ac92be4e0e5fcb746ed97c7666a737e1
  grd_files_bundled_sources = [
    "front_end/Images/3d-center.svg",
    "front_end/Images/3d-pan.svg",
-@@ -2863,6 +2865,7 @@ grd_files_unbundled_sources = [
+@@ -2872,6 +2874,7 @@ grd_files_unbundled_sources = [
    "front_end/ui/visual_logging/LoggingState.js",
    "front_end/ui/visual_logging/NonDomState.js",
  ]

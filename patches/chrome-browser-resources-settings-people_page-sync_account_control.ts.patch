@@ -1,8 +1,8 @@
 diff --git a/chrome/browser/resources/settings/people_page/sync_account_control.ts b/chrome/browser/resources/settings/people_page/sync_account_control.ts
-index ff02efd02cc76bdb8063b503527086887b16f24a..ea007d0ece395018d79c23de7905c48ebe1aa520 100644
+index 3d05a7c351eaba52d1611063fb5b95b66588e86a..693ef38004ad020437e62e70fc8c3494e47228a1 100644
 --- a/chrome/browser/resources/settings/people_page/sync_account_control.ts
 +++ b/chrome/browser/resources/settings/people_page/sync_account_control.ts
-@@ -871,5 +871,3 @@ declare global {
+@@ -844,5 +844,3 @@ declare global {
    }
  }
  

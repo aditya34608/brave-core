@@ -1,8 +1,8 @@
 diff --git a/chrome/browser/ui/views/tabs/common/tab_strip_collection_controller.h b/chrome/browser/ui/views/tabs/common/tab_strip_collection_controller.h
-index d241600d7194946d4cd65252a54e957848ab631d..a7ca4292d36cfb017943eb21ba65b1e6e94e2eab 100644
+index d1b81c21fdc3cadef8bf0f6b4819c9f72eda446d..8135c9aa43ffd9f15cc3b3593a6709ef3c06a151 100644
 --- a/chrome/browser/ui/views/tabs/common/tab_strip_collection_controller.h
 +++ b/chrome/browser/ui/views/tabs/common/tab_strip_collection_controller.h
-@@ -152,6 +152,9 @@ class TabStripCollectionController : public TabContextMenuController::Delegate {
+@@ -176,6 +176,9 @@ class TabStripCollectionController : public TabContextMenuController::Delegate {
    [[nodiscard]] base::AutoReset<bool> ScopedAnimateLayout();
    bool ShouldAnimateLayout() const;
  

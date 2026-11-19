@@ -1,8 +1,8 @@
 diff --git a/chrome/browser/ui/page_action/page_action_icon_type.h b/chrome/browser/ui/page_action/page_action_icon_type.h
-index 3f3af819540f83c6e5531a2c9b202121add64629..e672383e725e2ef096d90cd80e4d21a7aa8aab98 100644
+index f82d4ea865e210857d89f7c2f32fa83a0283e66b..e2886af09794a6bf345b289a04492e5c81f2f3d0 100644
 --- a/chrome/browser/ui/page_action/page_action_icon_type.h
 +++ b/chrome/browser/ui/page_action/page_action_icon_type.h
-@@ -63,7 +63,14 @@ enum class PageActionIconType {
+@@ -68,7 +68,14 @@ enum class PageActionIconType {
    kFakePageActionForDebug = 48,
    kWalletReminderNotice = 49,
    kGmailOtpOptIn = 50,

@@ -1,8 +1,8 @@
 diff --git a/services/network/public/cpp/features.cc b/services/network/public/cpp/features.cc
-index 75b177504275f4c564a5a67b87cd884f2c31069c..a31bfc589fe228e9f01db68cb1a393c3a7417353 100644
+index 682093a538c3c826842fc6eeb2b655450ef0b477..bdabdddd6dbf803b0c77ae7a753bdb7515415ec7 100644
 --- a/services/network/public/cpp/features.cc
 +++ b/services/network/public/cpp/features.cc
-@@ -243,7 +243,7 @@ BASE_FEATURE_PARAM(bool,
+@@ -232,7 +232,7 @@ BASE_FEATURE_PARAM(bool,
  // of vulnerable local devices.
  //
  // Spec: https://wicg.github.io/local-network-access/
@@ -11,7 +11,7 @@ index 75b177504275f4c564a5a67b87cd884f2c31069c..a31bfc589fe228e9f01db68cb1a393c3
               base::FEATURE_ENABLED_BY_DEFAULT);
  
  // Enables Local Network Access checks for WebTransport.
-@@ -400,7 +400,7 @@ BASE_FEATURE(kAllowSameOriginCredentialsWithDisableWebSecurity,
+@@ -389,7 +389,7 @@ BASE_FEATURE(kAllowSameOriginCredentialsWithDisableWebSecurity,
  
  // https://github.com/patcg-individual-drafts/topics
  // Kill switch for the Topics API.
@@ -20,7 +20,7 @@ index 75b177504275f4c564a5a67b87cd884f2c31069c..a31bfc589fe228e9f01db68cb1a393c3
  
  BASE_FEATURE(kIncreaseCookieAccessCacheSize, base::FEATURE_ENABLED_BY_DEFAULT);
  
-@@ -428,7 +428,7 @@ BASE_FEATURE(kCSPEmbeddedEnforcementTrustedTypes,
+@@ -417,7 +417,7 @@ BASE_FEATURE(kCSPEmbeddedEnforcementTrustedTypes,
  BASE_FEATURE(kCacheSharingForPervasiveResources,
               base::FEATURE_ENABLED_BY_DEFAULT);
  

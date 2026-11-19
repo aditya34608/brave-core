@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/ui/browser_window/internal/browser_window_features.cc b/chrome/browser/ui/browser_window/internal/browser_window_features.cc
-index e17f060cb05d724e9d282f1839b19e31a53930e1..b36a634b4ca9be9dc4d6391fccf21d46a6666b7e 100644
+index baaf1dde18a63ee0c9c85850cb7068ebb0e67206..f254780d440507e6107e983b9255fb5ebc1c07e1 100644
 --- a/chrome/browser/ui/browser_window/internal/browser_window_features.cc
 +++ b/chrome/browser/ui/browser_window/internal/browser_window_features.cc
 @@ -253,6 +253,10 @@ BrowserWindowFeatures::BrowserWindowFeatures() = default;

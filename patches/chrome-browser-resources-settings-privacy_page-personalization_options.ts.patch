@@ -1,8 +1,8 @@
 diff --git a/chrome/browser/resources/settings/privacy_page/personalization_options.ts b/chrome/browser/resources/settings/privacy_page/personalization_options.ts
-index 9a9f2cae6f969f3f2dc67ff7b1babde0d6e4f9ec..475a5e7c603255225b29e878bf880d6624c63221 100644
+index 9116afe95b7cbb1e119c7992af75e55c1ae8faf6..212063622cdf8d47e53578aa30859573fdee8589 100644
 --- a/chrome/browser/resources/settings/privacy_page/personalization_options.ts
 +++ b/chrome/browser/resources/settings/privacy_page/personalization_options.ts
-@@ -59,8 +59,10 @@ import {getHtml} from './personalization_options.html.js';
+@@ -59,8 +59,10 @@ import {PrivacyPageBrowserProxyImpl} from './privacy_page_browser_proxy.js';
  
  export interface SettingsPersonalizationOptionsElement {
    $: {

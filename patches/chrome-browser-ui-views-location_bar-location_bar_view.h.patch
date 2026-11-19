@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/ui/views/location_bar/location_bar_view.h b/chrome/browser/ui/views/location_bar/location_bar_view.h
-index 93970b803fdf179bd3de0e1f0ed9a6ca357a586d..2c17b82b8a505e14047c5da217c362cbf7438e5d 100644
+index fe0255846db14ccca834c6acc6b5fe1fa2556075..7d752153a876ad55a3ffe28fdae27f5baf8000e0 100644
 --- a/chrome/browser/ui/views/location_bar/location_bar_view.h
 +++ b/chrome/browser/ui/views/location_bar/location_bar_view.h
 @@ -133,11 +133,11 @@ class LocationBarView
@@ -56,7 +56,7 @@ index 93970b803fdf179bd3de0e1f0ed9a6ca357a586d..2c17b82b8a505e14047c5da217c362cb
  
    // Updates the visibility state of the content setting icons to reflect what
    // is blocked or actively in use on the current page. Returns true if the
-@@ -490,7 +495,7 @@ class LocationBarView
+@@ -491,7 +496,7 @@ class LocationBarView
    void AnimationCanceled(const gfx::Animation* animation) override;
    void OnChildViewRemoved(View* observed_view, View* child) override;
  

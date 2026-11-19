@@ -31,7 +31,7 @@
       ".[]",
       "repos/brave/test/issues?state=all&labels=bot%2Ftype%2Fasan&per_page=100"
     ],
-    "name": "list issues (brave/test)"
+    "name": "list bot/type/asan issues (brave/test)"
   },
   {
     "cmd": [

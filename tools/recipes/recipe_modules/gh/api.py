@@ -72,7 +72,7 @@ class GhApi(RecipeApi):
             {'state': 'all', 'labels': ','.join(labels), 'per_page': 100}
         )
         items = self._list(
-            f'list issues ({repo})',
+            f'list {",".join(labels)} issues ({repo})',
             f'repos/{repo}/issues?{query}',
             step_test_data=self.test_api.issues,
         )

@@ -95,7 +95,7 @@ source_set("browser_tests") {
       deps += [ "//brave/browser/ui/webui/custom_profile_image" ]
     }
 
-    if (is_win && enable_brave_vpn) {
+    if (enable_brave_vpn) {
       deps += [ "//brave/components/brave_vpn/common" ]
     }
 

@@ -106,7 +106,8 @@ def GenTests(api: TEST_DEPS):
     yield api.test(
         'open issue',
         api.step_data(
-            'list bot/type/asan issues (brave/test)', api.gh.issues(api.gh.issue(3))
+            'list bot/type/asan issues (brave/test)',
+            api.gh.issues(api.gh.issue(3)),
         ),
         api.post_process(
             post_process.DoesNotRun, 'reopen issue #3 (brave/test)'

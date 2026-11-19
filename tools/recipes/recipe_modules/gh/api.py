@@ -74,7 +74,7 @@ class GhApi(RecipeApi):
         items = self._list(
             f'list issues ({repo})',
             f'repos/{repo}/issues?{query}',
-            step_test_data=lambda: self.test_api.issues(),
+            step_test_data=self.test_api.issues,
         )
         return tuple(
             Issue.from_api(item) for item in items if 'pull_request' not in item
@@ -144,7 +144,7 @@ class GhApi(RecipeApi):
         items = self._list(
             f'list labels ({repo})',
             f'repos/{repo}/labels?per_page=100',
-            step_test_data=lambda: self.test_api.labels(),
+            step_test_data=self.test_api.labels,
         )
         return tuple(Label.from_api(item) for item in items)
 

@@ -58,7 +58,12 @@ with the differences it lists.
      failure on one platform that a rerun might pass is flaky: rerun the check
      once, and list the test in the report; don't fix or filter it. Muted
      TeamCity tests are already left out. A Brave test (in a `brave_*` binary)
-     is fixed, never filtered to get CI green.
+     is fixed, never filtered to get CI green. A views unit test failing only on
+     macOS may depend on hover: views tests there use the native screen, so
+     `View::IsMouseHovered()` follows the bot's real cursor (cr160: a tab
+     painting no separator). Reproduce on Linux by placing the widget under
+     `display::Screen::Get()->GetCursorScreenPoint()`, and fix the test by
+     placing it clear of the cursor.
    - **Flaky upstream tests**: an upstream test that fails as a flake does (a
      timeout, a simulated input that never lands) has already failed the test
      launcher's retries, so it is filtered rather than rerun. Read its full

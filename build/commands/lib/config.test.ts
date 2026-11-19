@@ -8,7 +8,6 @@ import path from 'node:path'
 import type { Builder } from './builderTypes.ts'
 import config from './config.ts'
 import { mockConfig } from './configMock.ts'
-import * as Log from './log.ts'
 import rootDir from './rootDir.cjs'
 
 describe('config', () => {
@@ -84,6 +83,11 @@ describe('with --builder', () => {
         custom_deps: { 'src/dep': null },
         custom_vars: { checkout_x: true },
       },
+      brave_config: {
+        is_brave_release_build: false,
+        ignore_patch_version_number: false,
+        use_brave_hermetic_toolchain: false,
+      },
     },
     buildTarget: { targetOS: 'android', targetArch: 'arm64' },
     targets: { compile: [], tests: [] },
@@ -107,6 +111,34 @@ describe('with --builder', () => {
     expect(installed.targetArch).toBe('arm64')
     expect(installed.buildConfig).toBe('Release')
     expect(installed.isBraveReleaseBuild()).toBe(false)
+  })
+
+  it('takes from the builder what .env otherwise says', () => {
+    const releaseBuilder: Builder = {
+      ...builder,
+      spec: {
+        ...builder.spec,
+        gclient_config: {
+          ...builder.spec.gclient_config,
+          global_vars: { a: 1 },
+        },
+        brave_config: {
+          is_brave_release_build: true,
+          ignore_patch_version_number: false,
+          use_brave_hermetic_toolchain: true,
+        },
+      },
+    }
+    const release = mockConfig({}, releaseBuilder)
+    expect(release.isBraveReleaseBuild()).toBe(true)
+    expect(release.ignorePatchVersionNumber).toBe(false)
+    expect(release.useBraveHermeticToolchain).toBe(true)
+    expect(release.gclientGlobalVars).toEqual({ a: 1 })
+
+    // Not from rbe_service, whatever service it names.
+    const plain = mockConfig({ rbe_service: 'rbe.ba.brave.com:443' }, builder)
+    expect(plain.useBraveHermeticToolchain).toBe(false)
+    expect(plain.gclientGlobalVars).toEqual({})
   })
 
   it('adds the builder .gclient solution to package.json', () => {
@@ -147,19 +179,9 @@ describe('with --builder', () => {
     }
   })
 
-  it('rejects anything else in .env, the builder secrets included', () => {
-    jest.spyOn(Log, 'error').mockImplementation(() => {})
-    jest.spyOn(process, 'exit').mockImplementation(() => {
-      throw new Error('process.exit called')
-    })
-    expect(() => mockConfig({ brave_services_key: 'secret' }, builder)).toThrow(
-      'process.exit called',
-    )
-    expect(Log.error).toHaveBeenCalledWith(
-      expect.stringContaining(
-        '.env has keys --builder does not allow: brave_services_key.',
-      ),
-    )
+  it('leaves anything else in .env unread, the builder secrets included', () => {
+    const installed = mockConfig({ brave_services_key: 'secret' }, builder)
+    expect(installed.isBuilderSet()).toBe(true)
   })
 
   it('throws when reading what neither .env nor package.json provides', () => {

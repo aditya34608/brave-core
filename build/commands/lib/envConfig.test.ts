@@ -291,7 +291,7 @@ describe('EnvConfig', () => {
   })
 
   describe('with a restriction', () => {
-    const dotenvKeys = ['rbe_service']
+    const allowedDotenvKeys = ['rbe_service']
 
     beforeEach(() => {
       mockFiles[packageJsonPath] = {
@@ -301,7 +301,7 @@ describe('EnvConfig', () => {
         },
       }
       mockFiles[envPath] = ['rbe_service=rbe.example.com:443']
-      envConfig = new EnvConfig(configDir, undefined, dotenvKeys)
+      envConfig = new EnvConfig(configDir, undefined, allowedDotenvKeys)
     })
 
     it('reads the allowed .env keys', () => {
@@ -331,21 +331,13 @@ describe('EnvConfig', () => {
       )
     })
 
-    it('errors on any other .env key', () => {
-      mockFiles[envPath] = ['rbe_service=x', 'gclient_verbose=true', 'b=1']
-      expect(() => new EnvConfig(configDir, undefined, dotenvKeys)).toThrow(
-        'process.exit called',
+    it('allows other .env keys, as long as nothing reads them', () => {
+      mockFiles[envPath] = ['rbe_service=x', 'gclient_verbose=true']
+      envConfig = new EnvConfig(configDir, undefined, allowedDotenvKeys)
+      expect(envConfig.getString(['rbe_service'])).toBe('x')
+      expect(() => envConfig.getBoolean(['gclient_verbose'])).toThrow(
+        'gclient_verbose is read',
       )
-      expect(Log.error).toHaveBeenCalledWith(
-        '.env has keys --builder does not allow: b, gclient_verbose. '
-          + 'It allows only rbe_service.',
-      )
-    })
-
-    it('is checked on given .env variables too', () => {
-      expect(
-        () => new EnvConfig(configDir, { other: 'x' }, dotenvKeys),
-      ).toThrow('process.exit called')
     })
   })
 

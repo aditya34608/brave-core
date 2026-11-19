@@ -15,6 +15,11 @@ export const mockBuilderSpec: BuilderSpec = {
   builder_group: 'brave.test',
   chromium_config: { target_platform: 'linux', build_config: 'Release' },
   gclient_config: { target_os: ['android'], target_cpu: [] },
+  brave_config: {
+    is_brave_release_build: false,
+    ignore_patch_version_number: false,
+    use_brave_hermetic_toolchain: false,
+  },
 }
 
 // A `properties.json` with `mockBuilderSpec` as `name`'s.

@@ -98,7 +98,11 @@ class CmdDescribeTest(unittest.TestCase):
                         'target_cpu': [],
                         'custom_deps': {'src/a': None, 'src/b': 'url'},
                         'custom_vars': {},
+                        'global_vars': {},
                     },
+                    'brave_config': testing_support.BUILDER_SPEC[
+                        'brave_config'
+                    ],
                 },
             ),
             sync={'target_os': ['android', 'linux'], 'target_cpu': []},

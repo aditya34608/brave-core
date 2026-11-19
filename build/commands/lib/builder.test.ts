@@ -190,6 +190,7 @@ describe('getBuilderGclientTargets', () => {
       builder_group: 'brave.test',
       chromium_config: { target_platform: 'android' },
       gclient_config: gclientConfig,
+      brave_config: mockBuilderSpec.brave_config,
     },
     buildTarget: { targetOS: 'android', targetArch: 'arm64' },
     targets: { compile: [], tests: [] },

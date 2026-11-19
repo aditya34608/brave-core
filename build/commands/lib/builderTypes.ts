@@ -15,7 +15,6 @@ export interface BuilderSpec {
     host_platform?: string | undefined
     build_config?: string | undefined
     target_arch?: string | undefined
-    target_bits?: number | undefined
   }
   gclient_config: {
     // What the checkout syncs besides the host, which gclient always syncs.
@@ -25,6 +24,14 @@ export interface BuilderSpec {
     // package.json's.
     custom_deps?: Record<string, string | null> | undefined
     custom_vars?: Record<string, string | boolean> | undefined
+    // The variables the builder sets at the top of `.gclient`.
+    global_vars?: Record<string, string | boolean | number> | undefined
+  }
+  // What the build tooling takes from the builder rather than `.env`.
+  brave_config: {
+    is_brave_release_build: boolean
+    ignore_patch_version_number: boolean
+    use_brave_hermetic_toolchain: boolean
   }
 }
 

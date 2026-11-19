@@ -27,6 +27,9 @@ builders.builder(
             target_arch=builder_config.target_arch.INTEL,
             target_bits=64,
         ),
+        brave_config=builder_config.brave_config(
+            use_brave_hermetic_toolchain=True,
+        ),
     ),
     gn_args=gn_args.config(
         configs=[
@@ -61,6 +64,9 @@ builders.builder(
             build_config=builder_config.build_config.RELEASE,
             target_arch=builder_config.target_arch.INTEL,
             target_bits=64,
+        ),
+        brave_config=builder_config.brave_config(
+            use_brave_hermetic_toolchain=True,
         ),
     ),
     gn_args=gn_args.config(

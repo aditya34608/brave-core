@@ -42,9 +42,15 @@ const braveCoreDir = path.join(rootDir, 'src', 'brave')
 // TODO(http://brave.dev/b/56449): Experimental implementation for integration
 // with our bots generator.
 // The only .env keys read with `--builder`, which takes everything else from
-// the builder: the machine's remote execution settings. Keep this short and
-// audited.
-const BUILDER_DOTENV_KEYS: readonly string[] = [
+// the builder: what stays local to the machine, its remote execution, caches
+// and output. Keep this short and audited.
+const BUILDER_ALLOWED_DOTENV_KEYS: readonly string[] = [
+  'cache_dir',
+  'gclient_verbose',
+  'git_cache_path',
+  'lean_sync',
+  'offline',
+  'quiet',
   'rbe_jobs_limit',
   'rbe_readonly',
   'rbe_service',
@@ -107,14 +113,14 @@ export class Config {
 
   // The checkout's config, read from its package.json and `dotenvConfig`, or
   // its .env files without it. With a builder, .env may only have
-  // BUILDER_DOTENV_KEYS, and reading any other value package.json does not
+  // BUILDER_ALLOWED_DOTENV_KEYS, and reading any other value package.json does not
   // provide throws.
   static load(builder?: Builder, dotenvConfig?: NodeJS.Dict<string>): Config {
     return new Config(
       new EnvConfig(
         braveCoreDir,
         dotenvConfig,
-        builder ? BUILDER_DOTENV_KEYS : undefined,
+        builder ? BUILDER_ALLOWED_DOTENV_KEYS : undefined,
       ),
       builder,
     )
@@ -242,11 +248,8 @@ export class Config {
   }
 
   get gclientVerbose(): boolean {
-    return this.#value(
-      'gclientVerbose',
-      () =>
-        !this.#builder
-        && this.#envConfig.getBoolean(['gclient_verbose'], false),
+    return this.#value('gclientVerbose', () =>
+      this.#envConfig.getBoolean(['gclient_verbose'], false),
     )
   }
 
@@ -262,9 +265,8 @@ export class Config {
   }
 
   get leanSync(): boolean {
-    return this.#value(
-      'leanSync',
-      () => !this.#builder && this.#envConfig.getBoolean(['lean_sync'], false),
+    return this.#value('leanSync', () =>
+      this.#envConfig.getBoolean(['lean_sync'], false),
     )
   }
 
@@ -274,9 +276,7 @@ export class Config {
 
   // `quiet` in .env: the `--quiet`/`--no-quiet` default, AI agent or not.
   get quiet(): boolean | undefined {
-    return this.#value('quiet', () =>
-      this.#builder ? undefined : this.#envConfig.getBoolean(['quiet']),
-    )
+    return this.#value('quiet', () => this.#envConfig.getBoolean(['quiet']))
   }
 
   set quiet(value: boolean | undefined) {
@@ -286,7 +286,7 @@ export class Config {
   get gclientGlobalVars(): Record<string, any> {
     return this.#value('gclientGlobalVars', () =>
       this.#builder
-        ? {}
+        ? { ...this.#builder.spec.gclient_config.global_vars }
         : this.#envConfig.getMergedObject(['gclient', 'global_vars']),
     )
   }
@@ -319,9 +319,11 @@ export class Config {
   }
 
   get ignorePatchVersionNumber(): boolean {
+    if (this.#builder) {
+      return this.#builder.spec.brave_config.ignore_patch_version_number
+    }
     return (
-      !this.#builder
-      && !this.isBraveReleaseBuild()
+      !this.isBraveReleaseBuild()
       && this.#envConfig.getBoolean(['ignore_patch_version_number'], !isCI)
     )
   }
@@ -386,17 +388,16 @@ export class Config {
 
   // Parent cache directory for all internal caches (git, siso, vpython).
   get cacheDir(): string | undefined {
-    return this.#builder ? undefined : this.#envConfig.getPath(['cache_dir'])
+    return this.#envConfig.getPath(['cache_dir'])
   }
 
   get gitCachePath(): string | undefined {
-    return this.#value('gitCachePath', () =>
-      // As depot_tools has it, with `--builder`.
-      this.#builder
-        ? process.env.GIT_CACHE_PATH
-        : this.#envConfig.getPath(['git_cache_path'])
-          || this.resolveCacheDir('git')
-          || process.env.GIT_CACHE_PATH,
+    return this.#value(
+      'gitCachePath',
+      () =>
+        this.#envConfig.getPath(['git_cache_path'])
+        || this.resolveCacheDir('git')
+        || process.env.GIT_CACHE_PATH,
     )
   }
 
@@ -494,9 +495,8 @@ export class Config {
   }
 
   get offline(): boolean {
-    return this.#value(
-      'offline',
-      () => !this.#builder && this.#envConfig.getBoolean(['offline'], false),
+    return this.#value('offline', () =>
+      this.#envConfig.getBoolean(['offline'], false),
     )
   }
 
@@ -509,12 +509,14 @@ export class Config {
   }
 
   get useBraveHermeticToolchain(): boolean {
-    return this.#value('useBraveHermeticToolchain', () => {
-      const internal = this.rbeService.includes('.brave.com:')
-      return this.#builder
-        ? internal
-        : this.#envConfig.getBoolean(['use_brave_hermetic_toolchain'], internal)
-    })
+    return this.#value('useBraveHermeticToolchain', () =>
+      this.#builder
+        ? this.#builder.spec.brave_config.use_brave_hermetic_toolchain
+        : this.#envConfig.getBoolean(
+            ['use_brave_hermetic_toolchain'],
+            this.rbeService.includes('.brave.com:'),
+          ),
+    )
   }
 
   set useBraveHermeticToolchain(value: boolean) {
@@ -580,16 +582,24 @@ export class Config {
         'chrome',
         'custom_vars',
       ])
+      // For remote execution through `rbe_service`.
+      const reapiVars = this.rbeService
+        ? {
+            'reapi_address': this.rbeService,
+            'reapi_backend_config_path': 'google.star',
+            'reapi_instance': 'default',
+          }
+        : {}
       if (this.#builder) {
         return {
           ...packageVars,
           ...this.#builder.spec.gclient_config.custom_vars,
-          ...this.#reapiCustomVars(),
+          ...reapiVars,
         }
       }
       return {
         'checkout_pgo_profiles': this.isBraveReleaseBuild(),
-        ...this.#reapiCustomVars(),
+        ...reapiVars,
         ...(this.is_msan ? { 'checkout_instrumented_libraries': true } : {}),
         ...packageVars,
       }
@@ -600,24 +610,13 @@ export class Config {
     this.#set('chromiumCustomVars', value)
   }
 
-  // The chromium custom vars for remote execution through `rbe_service`.
-  #reapiCustomVars(): Record<string, string> {
-    return this.rbeService
-      ? {
-          'reapi_address': this.rbeService,
-          'reapi_backend_config_path': 'google.star',
-          'reapi_instance': 'default',
-        }
-      : {}
-  }
-
   isReleaseBuild() {
     return this.buildConfig === 'Release'
   }
 
   isBraveReleaseBuild() {
     if (this.#builder) {
-      return false
+      return this.#builder.spec.brave_config.is_brave_release_build
     }
     const isBraveReleaseBuildValue = this.#envConfig.getNumber([
       'is_brave_release_build',

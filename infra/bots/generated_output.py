@@ -55,6 +55,7 @@ def _entry(builder) -> dict:
     """
     chromium_config = builder.builder_spec.chromium_config
     gclient_config = builder.builder_spec.gclient_config
+    brave_config = builder.builder_spec.brave_config
     fields = (
         ('build_config', chromium_config.build_config),
         ('host_platform', chromium_config.host_platform),
@@ -72,6 +73,16 @@ def _entry(builder) -> dict:
                 'target_cpu': list(gclient_config.target_cpu),
                 'custom_deps': dict(gclient_config.custom_deps),
                 'custom_vars': dict(gclient_config.custom_vars),
+                'global_vars': dict(gclient_config.global_vars),
+            },
+            'brave_config': {
+                'is_brave_release_build': brave_config.is_brave_release_build,
+                'ignore_patch_version_number': (
+                    brave_config.ignore_patch_version_number
+                ),
+                'use_brave_hermetic_toolchain': (
+                    brave_config.use_brave_hermetic_toolchain
+                ),
             },
         },
     }
@@ -300,9 +311,22 @@ class GeneratedBuilder:
             )
             problems.extend(
                 '"builder_spec.gclient_config.%s" is not an object' % field
-                for field in ('custom_deps', 'custom_vars')
+                for field in ('custom_deps', 'custom_vars', 'global_vars')
                 if not isinstance(gclient_config.get(field), dict)
             )
+            brave_config = builder_spec.get('brave_config')
+            if not isinstance(brave_config, dict):
+                problems.append('"builder_spec.brave_config" is not an object')
+            else:
+                problems.extend(
+                    '"builder_spec.brave_config.%s" is not a bool' % field
+                    for field in (
+                        'is_brave_release_build',
+                        'ignore_patch_version_number',
+                        'use_brave_hermetic_toolchain',
+                    )
+                    if not isinstance(brave_config.get(field), bool)
+                )
             return problems
 
         return find(self._read_json('properties.json', check))

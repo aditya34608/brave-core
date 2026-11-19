@@ -51,9 +51,10 @@ def marker(key: str) -> str:
     return _MARKER.format(key=key)
 
 
-def key_of(body: str) -> str | None:
-    """The key an issue's body carries, if it was filed for a request."""
-    match = _MARKER_RE.search(body)
+def key_of(text: str) -> str | None:
+    """The key an issue's body, `text`, carries, if it was filed for a
+    request."""
+    match = _MARKER_RE.search(text)
     return match['key'] if match else None
 
 
@@ -70,6 +71,25 @@ class Kind(enum.StrEnum):
     @property
     def label(self) -> Label:
         return Label(f'bot/type/{self}', _KIND_COLOURS[self])
+
+    @property
+    def short_name(self) -> str:
+        """How issues and notifications name the kind, e.g. `ASan`."""
+        return _KIND_NAMES[self]
+
+    @property
+    def is_sanitizer(self) -> bool:
+        return self is not Kind.TEST
+
+
+_KIND_NAMES: dict[Kind, str] = {
+    Kind.ASAN: 'ASan',
+    Kind.LSAN: 'LSan',
+    Kind.MSAN: 'MSan',
+    Kind.TSAN: 'TSan',
+    Kind.UBSAN: 'UBSan',
+    Kind.TEST: 'Test',
+}
 
 
 _KIND_COLOURS: dict[Kind, str] = {

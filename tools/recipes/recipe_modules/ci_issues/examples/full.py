@@ -152,8 +152,8 @@ def GenTests(api: TEST_DEPS):
         'ASan finding: heap-use-after-free in brave::Foo::Bar'
     ]
     overflow = keys['UBSan finding: signed integer overflow']
-    bar = keys['Test failure: BarTest.Fails']
-    baz = keys['Test failure: BazTest.Restarts']
+    fails = keys['Test failure: BarTest.Fails']
+    restarts = keys['Test failure: BazTest.Restarts']
     waits = keys['Test failures: Timed out after N ms']
 
     def body(key: str) -> str:
@@ -237,7 +237,7 @@ def GenTests(api: TEST_DEPS):
             api.gh.issues(
                 api.gh.issue(
                     9,
-                    body=body(bar),
+                    body=body(fails),
                     state='closed',
                     state_reason='completed',
                     labels=('ci-concern', 'bot/type/test'),
@@ -249,12 +249,18 @@ def GenTests(api: TEST_DEPS):
                     state_reason='not_planned',
                 ),
                 api.gh.issue(
-                    3, body=body(baz), state='closed', state_reason='completed'
+                    3,
+                    body=body(restarts),
+                    state='closed',
+                    state_reason='completed',
                 ),
-                api.gh.issue(12, body=body(baz)),
-                api.gh.issue(11, body=body(baz)),
+                api.gh.issue(12, body=body(restarts)),
+                api.gh.issue(11, body=body(restarts)),
                 api.gh.issue(
-                    13, body=body(baz), state='closed', state_reason='completed'
+                    13,
+                    body=body(restarts),
+                    state='closed',
+                    state_reason='completed',
                 ),
             ),
         ),
@@ -268,8 +274,8 @@ def GenTests(api: TEST_DEPS):
                     **{key: 'create' for key in every_key},
                     use_after_free: 'comment',
                     overflow: 'reopen',
-                    bar: 'reopen',
-                    baz: 'comment',
+                    fails: 'reopen',
+                    restarts: 'comment',
                     waits: 'comment',
                 },
             ),

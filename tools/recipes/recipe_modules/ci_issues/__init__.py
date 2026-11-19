@@ -11,7 +11,9 @@ from recipe_api import RecipeScriptApi
 from recipe_modules import gh, step
 
 from .api import CiIssuesApi as API
-from .api import Filed
+from .api import Filed, Filing
+from .policy import Action, Kind, Where
+from .requests import IssueRequest
 from .test_api import CiIssuesTestApi as TEST_API
 
 
@@ -23,4 +25,15 @@ class DEPS(RecipeScriptApi):
 
 PROPERTIES = InputProperties
 
-__all__ = ['API', 'DEPS', 'Filed', 'PROPERTIES', 'TEST_API']
+__all__ = [
+    'API',
+    'Action',
+    'DEPS',
+    'Filed',
+    'Filing',
+    'IssueRequest',
+    'Kind',
+    'PROPERTIES',
+    'TEST_API',
+    'Where',
+]

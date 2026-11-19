@@ -29,14 +29,37 @@ OUTPUT_PROPERTY = 'ci_issues'
 
 @dataclass(frozen=True)
 class Filed:
-    """What was done to file a request."""
+    """A request, and what was done to file it."""
 
-    key: str
-    action: Action
-    url: str
+    request: IssueRequest
+    # What was done, and the issue or comment it is at; None when CI gave
+    # no repository to file the request's kind in.
+    action: Action | None = None
+    url: str | None = None
+
+
+@dataclass(frozen=True)
+class Filing:
+    """What a build had filed: each of its requests, and why it made none
+    for what it withheld."""
+
+    where: Where
+    filed: tuple[Filed, ...] = ()
+    withheld: tuple[str, ...] = ()
 
     def to_json(self) -> dict[str, Any]:
-        return {'key': self.key, 'action': str(self.action), 'url': self.url}
+        return {
+            'filed': [
+                {
+                    'key': entry.request.key,
+                    'action': str(entry.action),
+                    'url': entry.url,
+                }
+                for entry in self.filed
+                if entry.action is not None
+            ],
+            'withheld': list(self.withheld),
+        }
 
 
 class CiIssuesApi(RecipeApi):
@@ -57,7 +80,7 @@ class CiIssuesApi(RecipeApi):
         builder: str,
         findings: Findings,
         outcomes: Mapping[str, SuiteOutcome],
-    ) -> tuple[Filed, ...]:
+    ) -> Filing:
         """File the build's findings and failing tests, and report what was
         filed, and what withheld, as the `ci_issues` output property.
 
@@ -67,7 +90,7 @@ class CiIssuesApi(RecipeApi):
             outcomes: How each of its suites' tests did.
 
         Returns:
-            What was done for each request.
+            What was done for each of the build's requests.
         """
         sanitizer_requests = requests.from_sanitizer_findings(findings)
         test_requests = requests.from_test_failures(
@@ -85,15 +108,19 @@ class CiIssuesApi(RecipeApi):
             ):
                 if repo and made.requests:
                     filed.extend(self._file(repo, made.requests, where))
-            step = self.m.step('filed', None)
-            step.presentation.properties[OUTPUT_PROPERTY] = {
-                'filed': [entry.to_json() for entry in filed],
-                'withheld': [
+                else:
+                    filed.extend(Filed(request) for request in made.requests)
+            filing = Filing(
+                where=where,
+                filed=tuple(filed),
+                withheld=(
                     *sanitizer_requests.withheld,
                     *test_requests.withheld,
-                ],
-            }
-        return tuple(filed)
+                ),
+            )
+            step = self.m.step('filed', None)
+            step.presentation.properties[OUTPUT_PROPERTY] = filing.to_json()
+        return filing
 
     def _file(
         self, repo: str, made: Sequence[IssueRequest], where: Where
@@ -130,7 +157,7 @@ class CiIssuesApi(RecipeApi):
                 body=request.body(where),
                 labels=labels,
             )
-            return Filed(request.key, Action.CREATE, created.url)
+            return Filed(request, Action.CREATE, created.url)
         action = policy.ON_RECURRENCE.get(
             (issue.state, issue.state_reason), Action.COMMENT
         )
@@ -141,7 +168,7 @@ class CiIssuesApi(RecipeApi):
         commented = self.m.gh.comment(
             repo, issue.number, request.comment(where)
         )
-        return Filed(request.key, action, commented.url)
+        return Filed(request, action, commented.url)
 
     def _existing(self, repo: str, kinds: Iterable[Kind]) -> dict[str, Issue]:
         """The issues of `kinds` filed in `repo` before, by key: for a key

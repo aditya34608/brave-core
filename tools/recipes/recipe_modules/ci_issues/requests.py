@@ -26,13 +26,13 @@ from test_results import SuiteOutcome, TestFailure, trim_output
 from . import policy
 from .policy import Kind, Where
 
-# The kind of issue each sanitiser's findings are, and its short name.
-_SANITIZER_KINDS: dict[Sanitizer, tuple[Kind, str]] = {
-    Sanitizer.ADDRESS: (Kind.ASAN, 'ASan'),
-    Sanitizer.LEAK: (Kind.LSAN, 'LSan'),
-    Sanitizer.MEMORY: (Kind.MSAN, 'MSan'),
-    Sanitizer.THREAD: (Kind.TSAN, 'TSan'),
-    Sanitizer.UNDEFINED: (Kind.UBSAN, 'UBSan'),
+# The kind of issue each sanitiser's findings are.
+_SANITIZER_KINDS: dict[Sanitizer, Kind] = {
+    Sanitizer.ADDRESS: Kind.ASAN,
+    Sanitizer.LEAK: Kind.LSAN,
+    Sanitizer.MEMORY: Kind.MSAN,
+    Sanitizer.THREAD: Kind.TSAN,
+    Sanitizer.UNDEFINED: Kind.UBSAN,
 }
 
 # How many tests failing with the same reason make the reason one bug.
@@ -64,6 +64,9 @@ class IssueRequest:
     # same key from build to build.
     key: str
     kind: Kind
+    # The bug in a few words, e.g. a finding's error and where, or a test's
+    # name, which its title and notifications say.
+    headline: str
     title: str
     # What was found, for a new issue.
     summary: str
@@ -114,17 +117,16 @@ def from_sanitizer_findings(findings: Findings) -> Requests:
 
 def _sanitizer_request(finding: Finding) -> IssueRequest:
     report = finding.report
-    kind, short_name = _SANITIZER_KINDS[report.sanitizer]
+    kind = _SANITIZER_KINDS[report.sanitizer]
     top = report.own_frames[0] if report.own_frames else None
     where = (top.function or top.location) if top else None
     located = f' (`{top.location}`)' if top and top.location else ''
+    headline = report.kind + (f' in {where}' if where else '')
     return IssueRequest(
         key=f'{kind}:{finding.id}',
         kind=kind,
-        title=policy.title(
-            f'{short_name} finding: {report.kind}'
-            + (f' in {where}' if where else '')
-        ),
+        headline=headline,
+        title=policy.title(f'{kind.short_name} finding: {headline}'),
         summary=(
             f'{report.sanitizer} reported a `{report.kind}`'
             + (f' in `{where}`{located}' if where else '')
@@ -175,6 +177,7 @@ def _test_request(suite: str, failure: TestFailure) -> IssueRequest:
     return IssueRequest(
         key=f'{Kind.TEST}:{name}',
         kind=Kind.TEST,
+        headline=name,
         title=policy.title(f'Test failure: {name}'),
         summary=f'`{failure.name}` failed: `{failure.message}`',
         seen=f'`{failure.name}` in `{suite}`, {failure.status}',
@@ -191,6 +194,7 @@ def _reason_request(
     return IssueRequest(
         key=f'{Kind.TEST}-reason:{digest}',
         kind=Kind.TEST,
+        headline=f'{len(failed)} tests failing with {reason}',
         title=policy.title(f'Test failures: {reason}'),
         summary=f'{len(failed)} tests failed with `{reason}`.',
         seen=f'{len(failed)} tests, in {_listed(s for s, _ in failed)}: {tests}',

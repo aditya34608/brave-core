@@ -222,7 +222,7 @@ IN_PROC_BROWSER_TEST_F(PasswordFaviconOffTheRecordBrowserTest,
       << "A password row in the Tor window did not fetch the site's favicon.";
 
   // Control: the same row in a regular window asks the Google favicon server,
-  // so the row above could have taken that path.
+  // so the Tor window's row could have taken that path too.
   ASSERT_NO_FATAL_FAILURE(ShowPasswordPopupAndWaitForPaint(browser()));
   EXPECT_THAT(GoogleServerRequests(),
               testing::ElementsAre(GURL(kPasswordSiteUrl)))
